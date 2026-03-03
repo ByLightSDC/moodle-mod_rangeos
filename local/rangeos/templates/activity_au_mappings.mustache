@@ -1,0 +1,94 @@
+{{!
+    Per-activity AU mapping view.
+
+    @template   local_rangeos/activity_au_mappings
+    @copyright  2026 David Ropte
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+<div data-baseurl="{{baseurl}}">
+    <div class="mb-3">
+        <a href="{{backurl}}" class="btn btn-outline-secondary">
+            &laquo; {{#str}}backtoactivity, local_rangeos{{/str}}
+        </a>
+    </div>
+
+    {{#hasenvironments}}
+    <div class="form-group row mb-3">
+        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
+            {{#str}}selectenvironment, local_rangeos{{/str}}
+        </label>
+        <div class="col-sm-4">
+            <select id="rangeos-env-select" class="custom-select">
+                {{#environments}}
+                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                {{/environments}}
+            </select>
+        </div>
+    </div>
+    {{/hasenvironments}}
+
+    {{#haserror}}
+    <div class="alert alert-danger">{{error}}</div>
+    {{/haserror}}
+
+    {{#hasaus}}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>{{#str}}au_iri, local_rangeos{{/str}}</th>
+                <th>{{#str}}au_title, local_rangeos{{/str}}</th>
+                <th>{{#str}}status, local_rangeos{{/str}}</th>
+                <th>{{#str}}scenarios, local_rangeos{{/str}}</th>
+                {{#canmanage}}
+                <th>{{#str}}actions{{/str}}</th>
+                {{/canmanage}}
+            </tr>
+        </thead>
+        <tbody>
+            {{#aus}}
+            <tr>
+                <td><code title="{{auid}}">{{auid}}</code></td>
+                <td>{{title}}</td>
+                <td>
+                    {{#has_mapping}}
+                    <span class="badge badge-success">{{#str}}mapped, local_rangeos{{/str}}</span>
+                    {{/has_mapping}}
+                    {{^has_mapping}}
+                    <span class="badge badge-warning">{{#str}}unmapped, local_rangeos{{/str}}</span>
+                    {{/has_mapping}}
+                </td>
+                <td>{{scenarios_display}}</td>
+                {{#canmanage}}
+                <td>
+                    {{#has_mapping}}
+                    <button class="btn btn-sm btn-outline-primary"
+                            data-action="edit-mapping"
+                            data-auid="{{auid}}"
+                            data-autitle="{{title}}">
+                        {{#str}}edit{{/str}}
+                    </button>
+                    {{/has_mapping}}
+                    {{^has_mapping}}
+                    <button class="btn btn-sm btn-outline-success"
+                            data-action="create-mapping"
+                            data-auid="{{auid}}"
+                            data-autitle="{{title}}">
+                        {{#str}}createmapping, local_rangeos{{/str}}
+                    </button>
+                    {{/has_mapping}}
+                </td>
+                {{/canmanage}}
+            </tr>
+            {{/aus}}
+        </tbody>
+    </table>
+    {{/hasaus}}
+
+    {{^hasaus}}
+    {{^haserror}}
+    <div class="alert alert-info">
+        {{#str}}noaus, local_rangeos{{/str}}
+    </div>
+    {{/haserror}}
+    {{/hasaus}}
+</div>

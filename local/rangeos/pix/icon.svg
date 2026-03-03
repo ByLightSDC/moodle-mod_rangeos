@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110">
+  <defs>
+    <style>
+      .bg{fill:#e3f2fd}.peak-back{fill:#1565c0}.peak-front{fill:#1e88e5}.peak-accent{fill:#42a5f5}.snow-back{fill:#bbdefb}.snow-front{fill:#e3f2fd}.base{fill:#0d47a1}.node{fill:#ff8f00}.node-ring{fill:#ffb300}.link{stroke:#ff8f00;stroke-width:2;fill:none}.none{fill:none}
+    </style>
+  </defs>
+  <!-- Background rounded square -->
+  <rect class="bg" x="5" y="5" width="100" height="100" rx="18"/>
+  <!-- Back mountain -->
+  <polygon class="peak-back" points="8,82 35,32 62,82"/>
+  <polygon class="snow-back" points="35,32 28,45 35,42 42,45"/>
+  <!-- Front mountain -->
+  <polygon class="peak-front" points="32,82 60,28 88,82"/>
+  <polygon class="snow-front" points="60,28 52,42 60,39 68,42"/>
+  <!-- Accent peak -->
+  <polygon class="peak-accent" points="58,82 80,42 102,82"/>
+  <!-- Base -->
+  <rect class="base" x="5" y="78" width="100" height="10" rx="5"/>
+  <!-- Network nodes (management/OS) -->
+  <circle class="node-ring" cx="82" cy="22" r="9"/>
+  <circle class="node" cx="82" cy="22" r="6"/>
+  <circle class="node-ring" cx="96" cy="42" r="6"/>
+  <circle class="node" cx="96" cy="42" r="4"/>
+  <line class="link" x1="88" y1="27" x2="92" y2="38"/>
+  <!-- Bounding box -->
+  <rect class="none" width="110" height="110"/>
+</svg>
