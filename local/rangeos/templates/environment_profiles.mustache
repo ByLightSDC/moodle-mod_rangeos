@@ -1,0 +1,51 @@
+{{!
+    Environment profiles listing template.
+
+    @template   local_rangeos/environment_profiles
+    @copyright  2026 David Ropte
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>{{#str}}name{{/str}}</th>
+            <th>{{#str}}apibaseurl, local_rangeos{{/str}}</th>
+            <th>{{#str}}isdefault, local_rangeos{{/str}}</th>
+            <th>{{#str}}status{{/str}}</th>
+            <th>{{#str}}actions{{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#environments}}
+        <tr>
+            <td>{{name}}</td>
+            <td><code>{{apibaseurl}}</code></td>
+            <td>
+                {{#isdefault}}
+                    <span class="badge badge-success">{{#str}}default{{/str}}</span>
+                {{/isdefault}}
+            </td>
+            <td>
+                {{#hasprofile}}
+                    <span class="badge badge-info">{{#str}}active{{/str}}</span>
+                {{/hasprofile}}
+                {{^hasprofile}}
+                    <span class="badge badge-warning">No profile</span>
+                {{/hasprofile}}
+            </td>
+            <td>
+                <a href="{{editurl}}" class="btn btn-sm btn-outline-primary">
+                    {{#str}}edit{{/str}}
+                </a>
+                <a href="{{testurl}}" class="btn btn-sm btn-outline-secondary">
+                    {{#str}}testconnection, local_rangeos{{/str}}
+                </a>
+                <a href="{{deleteurl}}" class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('{{#str}}deleteenvironment_confirm, local_rangeos, {{name}}{{/str}}');">
+                    {{#str}}delete{{/str}}
+                </a>
+            </td>
+        </tr>
+        {{/environments}}
+    </tbody>
+</table>

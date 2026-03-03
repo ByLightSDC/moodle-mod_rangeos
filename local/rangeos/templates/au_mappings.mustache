@@ -1,0 +1,105 @@
+{{!
+    Global AU mapping management page.
+
+    @template   local_rangeos/au_mappings
+    @copyright  2026 David Ropte
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+<div data-baseurl="{{baseurl}}">
+    {{#hasenvironments}}
+    <div class="form-group row mb-3">
+        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
+            {{#str}}selectenvironment, local_rangeos{{/str}}
+        </label>
+        <div class="col-sm-4">
+            <select id="rangeos-env-select" class="custom-select">
+                {{#environments}}
+                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                {{/environments}}
+            </select>
+        </div>
+    </div>
+    {{/hasenvironments}}
+
+    {{^hasenvironments}}
+    <div class="alert alert-info">
+        {{#str}}noenvironments, local_rangeos{{/str}}
+    </div>
+    {{/hasenvironments}}
+
+    {{#haserror}}
+    <div class="alert alert-danger">{{error}}</div>
+    {{/haserror}}
+
+    {{#hasenvironments}}
+    <div class="mb-3">
+        <button class="btn btn-primary" data-action="create-mapping">
+            {{#str}}createmapping, local_rangeos{{/str}}
+        </button>
+    </div>
+
+    {{#hasmappings}}
+    <div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th style="width:25%">{{#str}}mapping_name, local_rangeos{{/str}}</th>
+                <th style="width:25%">{{#str}}scenarios, local_rangeos{{/str}}</th>
+                <th style="width:20%">{{#str}}au_iri, local_rangeos{{/str}}</th>
+                <th style="width:18%">Activity</th>
+                <th style="width:12%">{{#str}}actions{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#mappings}}
+            <tr>
+                <td>{{#name}}{{name}}{{/name}}{{^name}}<span class="text-muted">Unnamed</span>{{/name}}</td>
+                <td>
+                    {{#scenario_count}}
+                    {{#scenario_badges}}
+                    <span class="badge badge-info mr-1 mb-1">{{.}}</span>
+                    {{/scenario_badges}}
+                    {{/scenario_count}}
+                    {{^scenario_count}}
+                    <span class="text-muted">None</span>
+                    {{/scenario_count}}
+                </td>
+                <td><code class="small text-break" title="{{auid}}">{{auid_short}}</code></td>
+                <td>
+                    {{#hasactivities}}
+                    {{#activities}}
+                    <div class="small">
+                        <a href="{{wwwroot}}/mod/cmi5/view.php?id={{cmid}}">{{activityname}}</a>
+                        <span class="text-muted">({{coursename}})</span>
+                    </div>
+                    {{/activities}}
+                    {{/hasactivities}}
+                    {{^hasactivities}}
+                    <span class="text-muted small">No local activity</span>
+                    {{/hasactivities}}
+                </td>
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary"
+                            data-action="edit-mapping"
+                            data-auid="{{auid}}"
+                            data-autitle="{{name}}"
+                            data-scenarios="{{scenarios_json}}">
+                        {{#str}}edit{{/str}}
+                    </button>
+                </td>
+            </tr>
+            {{/mappings}}
+        </tbody>
+    </table>
+    </div>
+    {{/hasmappings}}
+
+    {{^hasmappings}}
+    {{^haserror}}
+    <div class="alert alert-info">
+        {{#str}}nomappings, local_rangeos{{/str}}
+    </div>
+    {{/haserror}}
+    {{/hasmappings}}
+    {{/hasenvironments}}
+</div>

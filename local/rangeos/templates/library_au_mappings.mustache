@@ -1,0 +1,257 @@
+{{!
+    Library package AU-to-scenario mapping page.
+
+    @template   local_rangeos/library_au_mappings
+    @copyright  2026 David Ropte
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+<div data-baseurl="{{baseurl}}" data-versionid="{{versionid}}">
+    {{#hasenvironments}}
+    <div class="form-group row mb-3">
+        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
+            {{#str}}selectenvironment, local_rangeos{{/str}}
+        </label>
+        <div class="col-sm-4">
+            <select id="rangeos-env-select" class="custom-select">
+                {{#environments}}
+                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                {{/environments}}
+            </select>
+        </div>
+    </div>
+    {{/hasenvironments}}
+
+    {{^hasenvironments}}
+    <div class="alert alert-info">
+        {{#str}}noenvironments, local_rangeos{{/str}}
+    </div>
+    {{/hasenvironments}}
+
+    {{#haspackages}}
+    <div class="form-group row mb-3">
+        <label for="rangeos-package-select" class="col-sm-2 col-form-label">
+            {{#str}}selectpackage, local_rangeos{{/str}}
+        </label>
+        <div class="col-sm-6">
+            <select id="rangeos-package-select" class="custom-select">
+                <option value="">All packages</option>
+                {{#packages}}
+                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{title}}</option>
+                {{/packages}}
+            </select>
+        </div>
+    </div>
+    {{/haspackages}}
+
+    {{#haserror}}
+    <div class="alert alert-danger">{{error}}</div>
+    {{/haserror}}
+
+    {{#showallmode}}
+    <div class="d-flex align-items-center mb-3">
+        {{#showall}}
+        <span class="text-muted mr-2">Showing all {{totalaumappings}} RangeOS AU mappings.</span>
+        <a href="#" id="rangeos-toggle-filter" class="btn btn-sm btn-outline-secondary" data-showall="0">
+            Show only mapped to local activities
+        </a>
+        {{/showall}}
+        {{^showall}}
+            {{#hashidden}}
+            <span class="text-muted mr-2">Showing mappings with local activities. {{hiddencount}} additional mapping(s) hidden.</span>
+            <a href="#" id="rangeos-toggle-filter" class="btn btn-sm btn-outline-secondary" data-showall="1">
+                Show all
+            </a>
+            {{/hashidden}}
+        {{/showall}}
+    </div>
+    {{/showallmode}}
+
+    {{#hasselectedpackage}}
+    <h4 class="mb-3">{{packagetitle}}</h4>
+    {{/hasselectedpackage}}
+
+    {{#hasaus}}
+    <div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th style="width:5%">{{#str}}type, local_rangeos{{/str}}</th>
+                {{#showallmode}}
+                <th style="width:12%">Package</th>
+                {{/showallmode}}
+                <th style="width:14%">{{#str}}au_title, local_rangeos{{/str}}</th>
+                <th style="width:14%">{{#str}}au_iri, local_rangeos{{/str}}</th>
+                <th style="width:7%">{{#str}}status, local_rangeos{{/str}}</th>
+                <th style="width:14%">{{#str}}scenarios, local_rangeos{{/str}}</th>
+                <th style="width:14%">Activities</th>
+                {{#hasselectedpackage}}
+                <th style="width:7%">{{#str}}classmode, local_rangeos{{/str}}</th>
+                {{/hasselectedpackage}}
+                <th style="width:10%">{{#str}}actions{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#aus}}
+            <tr>
+                <td>
+                    <span class="badge badge-secondary mr-1">cmi5</span>
+                    {{#israngeos}}
+                    <span class="badge badge-primary" title="{{scenarioname}}">RangeOS</span>
+                    {{/israngeos}}
+                </td>
+                {{#showallmode}}
+                <td>
+                    {{#haspackageinfo}}
+                    <span class="small">{{packagetitle}}</span>
+                    {{/haspackageinfo}}
+                    {{^haspackageinfo}}
+                    <span class="text-muted small">&mdash;</span>
+                    {{/haspackageinfo}}
+                </td>
+                {{/showallmode}}
+                <td>
+                    {{title}}
+                    {{#israngeos}}{{#scenarioname}}
+                    <br><small class="text-muted">{{scenarioname}}</small>
+                    {{/scenarioname}}{{/israngeos}}
+                </td>
+                <td><code class="small text-break" title="{{auid}}">{{auid_short}}</code></td>
+                <td>
+                    {{#israngeos}}
+                        {{#ismapped}}
+                        <span class="badge badge-success">{{#str}}mapped, local_rangeos{{/str}}</span>
+                        {{/ismapped}}
+                        {{^ismapped}}
+                        <span class="badge badge-warning">{{#str}}unmapped, local_rangeos{{/str}}</span>
+                        {{/ismapped}}
+                    {{/israngeos}}
+                    {{^israngeos}}
+                    <span class="text-muted">&mdash;</span>
+                    {{/israngeos}}
+                </td>
+                <td>
+                    {{#israngeos}}
+                        {{#scenario_count}}
+                        {{#scenario_badges}}
+                        <span class="badge badge-info mr-1 mb-1">{{.}}</span>
+                        {{/scenario_badges}}
+                        {{/scenario_count}}
+                        {{^scenario_count}}
+                        <span class="text-muted">None</span>
+                        {{/scenario_count}}
+                    {{/israngeos}}
+                    {{^israngeos}}
+                    <span class="text-muted">&mdash;</span>
+                    {{/israngeos}}
+                </td>
+                <td>
+                    {{#hasactivities}}
+                    {{#activities}}
+                    <div class="small">
+                        <a href="{{{config.wwwroot}}}/mod/cmi5/view.php?id={{cmid}}">{{activityname}}</a>
+                        <span class="text-muted">({{coursename}})</span>
+                    </div>
+                    {{/activities}}
+                    {{/hasactivities}}
+                    {{^hasactivities}}
+                    <span class="text-muted small">&mdash;</span>
+                    {{/hasactivities}}
+                </td>
+                {{#hasselectedpackage}}
+                <td>
+                    {{#israngeos}}
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input"
+                               id="classmode-{{auid}}"
+                               data-action="toggle-classmode"
+                               data-auid="{{auid}}"
+                               {{#classmode}}checked{{/classmode}}>
+                        <label class="custom-control-label" for="classmode-{{auid}}"></label>
+                    </div>
+                    {{/israngeos}}
+                    {{^israngeos}}
+                    <span class="text-muted">&mdash;</span>
+                    {{/israngeos}}
+                </td>
+                {{/hasselectedpackage}}
+                <td>
+                    {{#israngeos}}
+                        {{#ismapped}}
+                        <button class="btn btn-sm btn-outline-primary mr-1"
+                                data-action="edit-mapping"
+                                data-auid="{{auid}}"
+                                data-autitle="{{mapping_name}}"
+                                data-scenarios="{{scenarios_json}}">
+                            {{#str}}edit{{/str}}
+                        </button>
+                        {{#firstscenariouuid}}
+                        <button class="btn btn-sm btn-outline-success"
+                                data-action="create-class"
+                                data-scenariouuid="{{firstscenariouuid}}"
+                                data-autitle="{{title}}">
+                            {{#str}}createclass, local_rangeos{{/str}}
+                        </button>
+                        {{/firstscenariouuid}}
+                        {{/ismapped}}
+                        {{^ismapped}}
+                        <button class="btn btn-sm btn-primary"
+                                data-action="create-mapping"
+                                data-auid="{{auid}}"
+                                data-autitle="{{title}}"
+                                data-scenarios="[]">
+                            Map
+                        </button>
+                        {{/ismapped}}
+                    {{/israngeos}}
+                </td>
+            </tr>
+            {{/aus}}
+        </tbody>
+    </table>
+    </div>
+    {{/hasaus}}
+
+    {{^hasaus}}
+    {{^haserror}}
+    <div class="alert alert-info">
+        {{#str}}nomappings, local_rangeos{{/str}}
+    </div>
+    {{/haserror}}
+    {{/hasaus}}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var envSelect = document.getElementById('rangeos-env-select');
+    var pkgSelect = document.getElementById('rangeos-package-select');
+    var base = '{{baseurl}}';
+
+    function buildUrl(params) {
+        var sep = base.indexOf('?') >= 0 ? '&' : '?';
+        var envid = envSelect ? envSelect.value : '';
+        var url = base + sep + 'envid=' + envid;
+        for (var k in params) {
+            if (params[k]) {
+                url += '&' + k + '=' + params[k];
+            }
+        }
+        return url;
+    }
+
+    if (pkgSelect) {
+        pkgSelect.addEventListener('change', function() {
+            window.location.href = buildUrl({packageid: pkgSelect.value});
+        });
+    }
+
+    var toggleBtn = document.getElementById('rangeos-toggle-filter');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var showAll = toggleBtn.getAttribute('data-showall');
+            var packageid = pkgSelect ? pkgSelect.value : '';
+            window.location.href = buildUrl({packageid: packageid, showall: showAll});
+        });
+    }
+});
+</script>
