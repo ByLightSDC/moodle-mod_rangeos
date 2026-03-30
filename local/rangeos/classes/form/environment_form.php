@@ -24,7 +24,7 @@ require_once($CFG->libdir . '/formslib.php');
  * Form for creating/editing RangeOS environment configurations.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class environment_form extends \moodleform {

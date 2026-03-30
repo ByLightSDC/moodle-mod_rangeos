@@ -22,7 +22,7 @@ defined('MOODLE_INTERNAL') || die();
  * Privacy null provider — this plugin does not store personal user data.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {

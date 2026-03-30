@@ -66,4 +66,4 @@ Navigate to **Site administration > Plugins > Local plugins > RangeOS Integratio
 
 This plugin is licensed under the [GNU GPL v3 or later](https://www.gnu.org/copyleft/gpl.html).
 
-Copyright 2026 David Ropte
+Copyright 2026 Bylight

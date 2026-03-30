@@ -27,7 +27,7 @@ use core_external\external_value;
  * Patch an AU's config.json to toggle class mode.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class patch_au_config extends external_api {

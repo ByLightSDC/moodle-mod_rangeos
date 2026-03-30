@@ -28,7 +28,7 @@ use core_external\external_value;
  * Return local cmi5 activities that have AU mappings with scenarios.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_local_activity_scenarios extends external_api {
