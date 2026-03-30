@@ -5,7 +5,7 @@ Moodle local plugin that integrates [RangeOS](https://rangeos.engineering) cyber
 ## Requirements
 
 - Moodle 4.5+ (tested on Moodle 5.0)
-- [mod_cmi5](https://github.com/dropte/moodle-cpt-plugin) v2026022600+
+- [mod_cmi5](https://github.com/bylightsdc/moodle-mod_cmi5) v2026022600+
 - A RangeOS environment with devops-api and Keycloak
 
 ## Installation
