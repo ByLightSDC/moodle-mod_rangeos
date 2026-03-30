@@ -2,7 +2,7 @@
  * Scenario search/select widget for local_rangeos.
  *
  * @module     local_rangeos/scenario_picker
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

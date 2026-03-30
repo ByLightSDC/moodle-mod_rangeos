@@ -28,7 +28,7 @@ use core_external\external_value;
  * Get scenario instances belonging to a class.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_class_instances extends external_api {

@@ -22,7 +22,7 @@ defined('MOODLE_INTERNAL') || die();
  * Checks AU mapping status against the RangeOS devops-api.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class au_mapping_manager {

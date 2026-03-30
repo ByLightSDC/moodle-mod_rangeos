@@ -27,7 +27,7 @@ use core_external\external_value;
  * Delete a single scenario instance via devops-api.
  *
  * @package    local_rangeos
- * @copyright  2026 David Ropte
+ * @copyright  2026 Bylight
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class delete_scenario_instance extends external_api {
