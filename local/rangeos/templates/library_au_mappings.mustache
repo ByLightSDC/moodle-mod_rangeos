@@ -225,18 +225,18 @@
             {{#str}}page, local_rangeos{{/str}} {{currentpage}} / {{totalpages}}
         </div>
         <div>
-            {{#hasprev}}
-            <a href="{{baseurl}}?envid={{envid}}&packageid={{packageid}}&page={{prevpage}}"
+        {{#hasprev}}
+            <a href="{{baseurl}}?envid={{envid}}&packageid={{packageid}}&showall={{showall}}&page={{prevpage}}"
             class="btn btn-sm btn-outline-secondary mr-1">
                 &laquo; Previous
             </a>
-            {{/hasprev}}
-            {{#hasnext}}
-            <a href="{{baseurl}}?envid={{envid}}&packageid={{packageid}}&page={{nextpage}}"
+        {{/hasprev}}
+        {{#hasnext}}
+            <a href="{{baseurl}}?envid={{envid}}&packageid={{packageid}}&showall={{showall}}&page={{nextpage}}"
             class="btn btn-sm btn-outline-secondary">
                 Next &raquo;
             </a>
-            {{/hasnext}}
+        {{/hasnext}}
         </div>
     </div>
     {{/showpagination}}

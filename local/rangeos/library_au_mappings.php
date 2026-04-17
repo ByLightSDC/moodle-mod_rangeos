@@ -102,12 +102,12 @@ if ($envid > 0) {
                 $mapping = $client->get_au_mapping($au->auid);
                 if ($mapping) {
                     $aumappings[$au->auid] = $mapping;
-                    foreach ($mapping['scenarios'] ?? [] as $s) {
+    /*                 foreach ($mapping['scenarios'] ?? [] as $s) {
                         $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
                         if ($uuid) {
                             $scenariouuids[$uuid] = true;
                         }
-                    }
+                    } */// moving this
                 }
             }
             $end = microtime(true);
@@ -148,12 +148,12 @@ if ($envid > 0) {
                         ];
                     }
                     // Loop through each mapping, add scenarios to the scenario lookup table.
-                    foreach ($m['scenarios'] ?? [] as $s) {
+  /*                   foreach ($m['scenarios'] ?? [] as $s) {
                         $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
                         if ($uuid) {
                             $scenariouuids[$uuid] = true;
                         }
-                    }
+                    } */
                 }
                 $page++;
                 $totalpages = $response['totalPages'] ?? 1;
@@ -168,6 +168,13 @@ if ($envid > 0) {
         if (!empty($scenariouuids)) {
             $scenariopage = 0;
             $start = microtime(true);
+            debugging("Number of scenario UUIDs to resolve: " . count($scenariouuids), DEBUG_DEVELOPER);
+            foreach ($scenariouuids as $uuid => $true) {
+                $scenario = $client->get_content_scenario($uuid);
+                if ($scenario) {
+                    $scenariolookup[$uuid] = $scenario['name'] ?? '';
+                }
+            }           
 /*             do {
                 debugging("Let's get the list of scenarios - page " . $scenariopage, DEBUG_DEVELOPER);
                 $scenarioresponse = $client->list_content_scenarios([
@@ -294,6 +301,15 @@ foreach ($aus as $auid => $au) {
 
     $mapping = $aumappings[$au->auid] ?? null;
     $scenarios = $mapping['scenarios'] ?? [];
+
+    // after the filter check, before building the rest of audata
+    foreach ($scenarios as $s) {
+        $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
+        if ($uuid) {
+            $scenariouuids[$uuid] = true;
+        }
+    }
+
     $scenariobadges = [];
     foreach ($scenarios as $s) {
         $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
@@ -400,7 +416,7 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'baseurl' => $baseurl,
     'libraryurl' => (new moodle_url('/mod/cmi5/library.php'))->out(false),
     'currentpage' => $currentpage,
-    'showpagination' => ($packageid === 0 && $totalpages > 1),
+    'showpagination' => ($packageid === 0 && $totalpages > 1 && !empty($audata)),
     'totalpages' => $totalpages,
     'hasprev' => $currentpage > 0,
     'hasnext' => $currentpage < ($totalpages - 1),
