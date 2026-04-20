@@ -23,8 +23,7 @@
  */
 
 require_once(__DIR__ . '/../../config.php');
-//global $CFG;
-//require_once($CFG->libdir . '/filelib.php');
+
 use local_rangeos\environment_manager;
 use local_rangeos\form\environment_form;
 

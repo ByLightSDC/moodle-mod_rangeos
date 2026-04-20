@@ -78,7 +78,7 @@ if ($packageid > 0) {
         if ($versionid) {
             $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
             foreach ($packageaus as $pau) {
-                //TODO - make AUs bypackage id (packacge au is by au id)
+                //TODO - make AUs by package id (package au is by au id)
                 $aus[$pau->auid] = $pau;
             }
         }
@@ -102,12 +102,6 @@ if ($envid > 0) {
                 $mapping = $client->get_au_mapping($au->auid);
                 if ($mapping) {
                     $aumappings[$au->auid] = $mapping;
-    /*                 foreach ($mapping['scenarios'] ?? [] as $s) {
-                        $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
-                        if ($uuid) {
-                            $scenariouuids[$uuid] = true;
-                        }
-                    } */// moving this
                 }
             }
             $end = microtime(true);
@@ -118,12 +112,7 @@ if ($envid > 0) {
             $start_aumappings = microtime(true);
             $scenariouuids = [];
             $page = 0;
-          //  do {
-                //Grabbing every single mapping
-                //$response = $client->list_au_mappings([
-                //    'page' => $page,
-                //    'pageSize' => 100,
-                //]);
+                //Grabbing upto 20 mappings
                 $response = $client->list_au_mappings([
                     'page' => $currentpage,
                     'pageSize' => 20,
@@ -147,17 +136,10 @@ if ($envid > 0) {
                             'versionid' => 0,
                         ];
                     }
-                    // Loop through each mapping, add scenarios to the scenario lookup table.
-  /*                   foreach ($m['scenarios'] ?? [] as $s) {
-                        $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
-                        if ($uuid) {
-                            $scenariouuids[$uuid] = true;
-                        }
-                    } */
                 }
                 $page++;
                 $totalpages = $response['totalPages'] ?? 1;
-          //  } while ($page < $totalpages);
+
             debugging("AU mappings fetch took " . (microtime(true) - $start_aumappings) . " seconds", DEBUG_DEVELOPER);
         }
 
@@ -175,27 +157,6 @@ if ($envid > 0) {
                     $scenariolookup[$uuid] = $scenario['name'] ?? '';
                 }
             }           
-/*             do {
-                debugging("Let's get the list of scenarios - page " . $scenariopage, DEBUG_DEVELOPER);
-                $scenarioresponse = $client->list_content_scenarios([
-                    'page' => $scenariopage,
-                    'pageSize' => 100,
-                ]);
-                foreach ($scenarioresponse['data'] ?? [] as $s) {
-                    $s = (array) $s;
-                    $uuid = $s['uuid'] ?? '';
-                    //does this scenario apply to this course
-                    if ($uuid && isset($scenariouuids[$uuid])) {
-                        $scenariolookup[$uuid] = $s['name'] ?? '';
-                    }
-                }
-                if (count($scenariolookup) >= count($scenariouuids)) {
-                    break;
-                }
-                
-                $scenariopage++;
-                $scenariototal = $scenarioresponse['totalPages'] ?? 1;
-            } while ($scenariopage < $scenariototal); */
             $end = microtime(true);
             debugging("looping through scenarios took " . ($end - $start) . " seconds", DEBUG_DEVELOPER);
         }
