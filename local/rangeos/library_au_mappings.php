@@ -88,6 +88,8 @@ if ($packageid > 0) {
 // Fetch AU mappings from devops-api.
 $aumappings = []; // auid => mapping data.
 $scenariolookup = []; // uuid => name.
+$scenariouuids = [];
+$client = null;
 $error = '';
 if ($envid > 0) {
     try {
@@ -117,6 +119,7 @@ if ($envid > 0) {
                     'page' => $currentpage,
                     'pageSize' => 20,
                 ]);
+                debugging("API response keys: " . json_encode(array_keys((array)$response)) . " | totalPages: " . json_encode($response['totalPages'] ?? 'MISSING'), DEBUG_DEVELOPER);
                 $items = $response['data'] ?? $response['items'] ?? $response;
                 foreach ($items as $m) {
                     $m = (array) $m;
@@ -141,25 +144,9 @@ if ($envid > 0) {
                 $totalpages = $response['totalPages'] ?? 1;
 
             debugging("AU mappings fetch took " . (microtime(true) - $start_aumappings) . " seconds", DEBUG_DEVELOPER);
-        }
+            debugging("Is the new code making it?", DEBUG_DEVELOPER);
 
-        // Resolve scenario UUIDs to names.
-        // May be an issue, calling ALL scenarios
-        // Can we time this? How much time does this take.
-        // instead of pullng all the pages and looping, you could gra each scenario and get name out of response.
-        if (!empty($scenariouuids)) {
-            $scenariopage = 0;
-            $start = microtime(true);
-            debugging("Number of scenario UUIDs to resolve: " . count($scenariouuids), DEBUG_DEVELOPER);
-            foreach ($scenariouuids as $uuid => $true) {
-                $scenario = $client->get_content_scenario($uuid);
-                if ($scenario) {
-                    $scenariolookup[$uuid] = $scenario['name'] ?? '';
-                }
-            }           
-            $end = microtime(true);
-            debugging("looping through scenarios took " . ($end - $start) . " seconds", DEBUG_DEVELOPER);
-        }
+            }
 
     } catch (\Exception $e) {
         $error = $e->getMessage();
@@ -351,9 +338,48 @@ foreach ($aus as $auid => $au) {
     ];
 }
 
+// Resolve scenario UUIDs via a single bulk fetch, then update scenario_badges.
+if ($client && !empty($scenariouuids)) {
+    $start = microtime(true);
+    debugging("Bulk-fetching content scenarios to resolve " . count($scenariouuids) . " UUIDs", DEBUG_DEVELOPER);
+    $scenarioresponse = $client->list_content_scenarios(['page' => 0, 'pageSize' => 500]);
+    $scenarioitems = $scenarioresponse['data'] ?? [];
+    foreach ($scenarioitems as $s) {
+        $s = (array) $s;
+        $uuid = $s['uuid'] ?? '';
+        if ($uuid) {
+            $scenariolookup[$uuid] = $s['name'] ?? '';
+        }
+    }
+    debugging("Bulk scenario fetch took " . (microtime(true) - $start) . " seconds", DEBUG_DEVELOPER);
+
+    foreach ($audata as &$entry) {
+        $scenarios = json_decode($entry['scenarios_json'], true) ?? [];
+        $badges = [];
+        foreach ($scenarios as $s) {
+            $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
+            $name = $scenariolookup[$uuid] ?? '';
+            $badges[] = $name ?: $uuid;
+        }
+        $entry['scenario_badges'] = $badges;
+    }
+    unset($entry);
+}
+
 $baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php'))->out(false);
 
 $hiddencount = $totalaumappings - count($audata);
+
+// Paginate $audata (always 20 per page). The API may return more items than pageSize if it
+// ignores the parameter, so we always PHP-slice as a safety net. In all-mappings mode,
+// $totalpages from the API is used when available; otherwise we derive it from the data count.
+$pagesize = 20;
+$totalaudata = count($audata);
+if ($packageid === 0 && $totalpages <= 1 && $totalaudata > $pagesize) {
+    // API didn't paginate — derive totalpages from actual item count.
+    $totalpages = (int) ceil($totalaudata / $pagesize);
+}
+$audata = array_slice($audata, $currentpage * $pagesize, $pagesize);
 
 
 echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
@@ -377,7 +403,8 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'baseurl' => $baseurl,
     'libraryurl' => (new moodle_url('/mod/cmi5/library.php'))->out(false),
     'currentpage' => $currentpage,
-    'showpagination' => ($packageid === 0 && $totalpages > 1 && !empty($audata)),
+    'currentpagedisplay' => $currentpage + 1,
+    'showpagination' => ($totalpages > 1),
     'totalpages' => $totalpages,
     'hasprev' => $currentpage > 0,
     'hasnext' => $currentpage < ($totalpages - 1),
