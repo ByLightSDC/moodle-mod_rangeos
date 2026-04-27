@@ -421,10 +421,13 @@ $perpageselect .= html_writer::select(
     ['id' => 'rangeos-perpage-select', 'class' => 'custom-select custom-select-sm w-auto', 'style' => 'vertical-align: middle;']
 );
 
-echo html_writer::tag('style', '.pagination { margin-bottom: 0; }');
-echo html_writer::div(
-    html_writer::div($perpageselect, 'd-flex align-items-center mr-3') .
-    html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
-    'd-flex align-items-center justify-content-center mt-3'
-);
+// Only show pages if there is more than one page.
+if ($pagecount >= $pagesize || $currentpage > 0) {
+    echo html_writer::tag('style', '.pagination { margin-bottom: 0; }');
+    echo html_writer::div(
+        html_writer::div($perpageselect, 'd-flex align-items-center mr-3') .
+        html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
+        'd-flex align-items-center justify-content-center mt-3'
+    );
+}
 echo $OUTPUT->footer();
