@@ -109,7 +109,7 @@ if ($envid > 0) {
             $start_aumappings = microtime(true);
             $scenariouuids = [];
             $page = 0;
-                //Grabbing upto 20 mappings
+                //Grab up to the selected pagesize.
                 $response = $client->list_au_mappings([
                     'page' => $currentpage,
                     'pageSize' => $pagesize,
