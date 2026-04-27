@@ -69,7 +69,6 @@ $aus = []; // auid => {auid, title, url, versionid}
 $packagetitle = '';
 $versionid = 0;
 
-
 if ($packageid > 0) {
     // Package-filtered mode: show AUs from this specific package.
     $package = $DB->get_record('cmi5_packages', ['id' => $packageid]);
@@ -79,7 +78,6 @@ if ($packageid > 0) {
         if ($versionid) {
             $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
             foreach ($packageaus as $pau) {
-                //TODO - make AUs by package id (package au is by au id)
                 $aus[$pau->auid] = $pau;
             }
         }
@@ -97,8 +95,6 @@ if ($envid > 0) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
         if ($packageid > 0 && !empty($aus)) {
-            debugging("The package id here - " . $packageid, DEBUG_DEVELOPER);
-            $start = microtime(true);
             // Package mode: fetch mappings per AU.
             // Building a lookup table of scenario UUID
             $scenariouuids = [];
@@ -108,11 +104,8 @@ if ($envid > 0) {
                     $aumappings[$au->auid] = $mapping;
                 }
             }
-            $end = microtime(true);
-            debugging("looping through aus took " . ($end - $start) . " seconds", DEBUG_DEVELOPER);
         } else {
             // All-mappings mode: fetch all AU mappings from the API.
-            debugging("We are in all mappings mode", DEBUG_DEVELOPER);
             $start_aumappings = microtime(true);
             $scenariouuids = [];
             $page = 0;
@@ -121,7 +114,6 @@ if ($envid > 0) {
                     'page' => $currentpage,
                     'pageSize' => $pagesize,
                 ]);
-                debugging("API response keys: " . json_encode(array_keys((array)$response)) . " | totalPages: " . json_encode($response['totalPages'] ?? 'MISSING'), DEBUG_DEVELOPER);
                 $items = $response['data'] ?? $response['items'] ?? $response;
                 foreach ($items as $m) {
                     $m = (array) $m;
@@ -145,9 +137,6 @@ if ($envid > 0) {
                 $page++;
                 $totalpages = $response['totalPages'] ?? 1;
                 $totalitems = $response['totalCount'] ?? $response['total'] ?? null;
-
-            debugging("AU mappings fetch took " . (microtime(true) - $start_aumappings) . " seconds", DEBUG_DEVELOPER);
-            debugging("Is the new code making it?", DEBUG_DEVELOPER);
 
             }
 
@@ -343,8 +332,6 @@ foreach ($aus as $auid => $au) {
 
 // Resolve scenario UUIDs via a single bulk fetch, then update scenario_badges.
 if ($client && !empty($scenariouuids)) {
-    $start = microtime(true);
-    debugging("Bulk-fetching content scenarios to resolve " . count($scenariouuids) . " UUIDs", DEBUG_DEVELOPER);
     $scenarioresponse = $client->list_content_scenarios(['page' => 0, 'pageSize' => 500]);
     $scenarioitems = $scenarioresponse['data'] ?? [];
     foreach ($scenarioitems as $s) {
@@ -354,8 +341,6 @@ if ($client && !empty($scenariouuids)) {
             $scenariolookup[$uuid] = $s['name'] ?? '';
         }
     }
-    debugging("Bulk scenario fetch took " . (microtime(true) - $start) . " seconds", DEBUG_DEVELOPER);
-
     foreach ($audata as &$entry) {
         $scenarios = json_decode($entry['scenarios_json'], true) ?? [];
         $badges = [];

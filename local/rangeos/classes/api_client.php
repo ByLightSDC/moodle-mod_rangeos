@@ -208,24 +208,6 @@ class api_client {
     }
 
     /**
-     * For CCUI 2910
-     * Get a single content scenario by UUID.
-     *
-     * @param string $uuid Scenario UUID.
-     * @return array|null Decoded response or null if not found.
-     */
-    public function get_content_scenario(string $uuid): ?array {
-        try {
-            return $this->get('/v1/content/range/scenarios/' . urlencode($uuid));
-        } catch (\moodle_exception $e) {
-            if (strpos($e->getMessage(), '404') !== false) {
-                return null;
-            }
-            throw $e;
-        }
-    }
-
-    /**
      * List content scenario definitions (library).
      *
      * @param array $params Query parameters (page, pageSize, search, etc.).
