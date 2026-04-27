@@ -91,6 +91,11 @@ if ($action === 'edit' || $action === 'add') {
     }
 
     echo $OUTPUT->header();
+    echo html_writer::link(
+        new moodle_url('/local/rangeos/manage.php'),
+        get_string('backtomanagement', 'local_rangeos'),
+        ['class' => 'btn btn-secondary mb-3']
+    );
     $heading = ($action === 'edit')
         ? get_string('editenvironment', 'local_rangeos')
         : get_string('addenvironment', 'local_rangeos');
@@ -104,6 +109,11 @@ if ($action === 'edit' || $action === 'add') {
 $environments = environment_manager::list_environments();
 
 echo $OUTPUT->header();
+echo html_writer::link(
+    new moodle_url('/local/rangeos/manage.php'),
+    get_string('backtomanagement', 'local_rangeos'),
+    ['class' => 'btn btn-secondary mb-3']
+);
 echo $OUTPUT->heading(get_string('environments', 'local_rangeos'));
 
 $addurl = new moodle_url('/local/rangeos/environment_profiles.php', ['action' => 'add']);

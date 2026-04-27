@@ -28,6 +28,41 @@ defined('MOODLE_INTERNAL') || die();
 class observer {
 
     /**
+     * Handle course_module_created for cmi5 activities.
+     *
+     * Assigns the default RangeOS environment profile to newly created cmi5
+     * activities that don't already have a profile set.
+     *
+     * @param \core\event\course_module_created $event The event.
+     */
+    public static function on_course_module_created(\core\event\course_module_created $event): void {
+        global $DB;
+
+        $data = $event->get_data();
+
+        // Only act on cmi5 modules.
+        if (($data['other']['modulename'] ?? '') !== 'cmi5') {
+            return;
+        }
+
+        $cmid = $data['objectid'];
+        $cm = get_coursemodule_from_id('cmi5', $cmid, 0, false, IGNORE_MISSING);
+        if (!$cm) {
+            return;
+        }
+
+        $cmi5 = $DB->get_record('cmi5', ['id' => $cm->instance]);
+        if (!$cmi5 || !empty($cmi5->profileid)) {
+            return;
+        }
+
+        $defaultprofileid = environment_manager::get_default_profile_id();
+        if ($defaultprofileid) {
+            $DB->set_field('cmi5', 'profileid', $defaultprofileid, ['id' => $cmi5->id]);
+        }
+    }
+
+    /**
      * Handle the package_deployed event from local_rapidcmi5.
      *
      * 1. Assign the default RangeOS environment profile to the deployed activity.

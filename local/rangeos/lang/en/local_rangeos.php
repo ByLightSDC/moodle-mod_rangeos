@@ -54,8 +54,10 @@ $string['keycloakclientid'] = 'Keycloak client ID';
 $string['keycloakclientid_help'] = 'User-facing Keycloak client ID included in launch parameters.';
 $string['keycloakscope'] = 'Keycloak scope';
 $string['keycloakscope_help'] = 'OAuth2 scope for Keycloak authentication.';
-$string['slidelogo'] = 'Slide logo';
-$string['slidelogo_help'] = 'Path or URL to the logo used in scenario slides.';
+$string['lightlogo'] = 'Light logo';
+$string['lightlogo_help'] = 'Path or URL to the logo used on light-themed scenario slides.';
+$string['darklogo'] = 'Dark logo';
+$string['darklogo_help'] = 'Path or URL to the logo used on dark-themed scenario slides.';
 $string['auth_token_url'] = 'Auth token URL';
 $string['auth_token_url_help'] = 'Keycloak token endpoint for machine-to-machine (client_credentials) authentication to the devops-api.';
 $string['auth_client_id'] = 'Auth client ID';
@@ -99,6 +101,7 @@ $string['searchscenarios'] = 'Search scenarios...';
 $string['allclasses'] = 'All classes';
 $string['filterbyclass'] = 'Filter by class';
 $string['backtoactivity'] = 'Back to activity';
+$string['backtomanagement'] = '← Back to RangeOS Management';
 $string['noaus'] = 'No AUs found for this activity.';
 
 // Observer / notifications.

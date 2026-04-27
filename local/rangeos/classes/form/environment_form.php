@@ -91,10 +91,15 @@ class environment_form extends \moodleform {
         $mform->setType('keycloakscope', PARAM_TEXT);
         $mform->addHelpButton('keycloakscope', 'keycloakscope', 'local_rangeos');
 
-        $mform->addElement('text', 'slidelogo', get_string('slidelogo', 'local_rangeos'),
-            ['size' => 60, 'placeholder' => '/images/logo.svg']);
-        $mform->setType('slidelogo', PARAM_TEXT);
-        $mform->addHelpButton('slidelogo', 'slidelogo', 'local_rangeos');
+        $mform->addElement('text', 'lightlogo', get_string('lightlogo', 'local_rangeos'),
+            ['size' => 60, 'placeholder' => '/images/logo-light.svg']);
+        $mform->setType('lightlogo', PARAM_TEXT);
+        $mform->addHelpButton('lightlogo', 'lightlogo', 'local_rangeos');
+
+        $mform->addElement('text', 'darklogo', get_string('darklogo', 'local_rangeos'),
+            ['size' => 60, 'placeholder' => '/images/logo-dark.svg']);
+        $mform->setType('darklogo', PARAM_TEXT);
+        $mform->addHelpButton('darklogo', 'darklogo', 'local_rangeos');
 
         // M2M authentication credentials (server-side only, not in launch params).
         $mform->addElement('header', 'authhdr', get_string('authentication', 'admin'));

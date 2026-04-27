@@ -21,4 +21,8 @@ $observers = [
         'eventname' => '\local_rapidcmi5\event\package_deployed',
         'callback' => '\local_rangeos\observer::on_package_deployed',
     ],
+    [
+        'eventname' => '\core\event\course_module_created',
+        'callback' => '\local_rangeos\observer::on_course_module_created',
+    ],
 ];

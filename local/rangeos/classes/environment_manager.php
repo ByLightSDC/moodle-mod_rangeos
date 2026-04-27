@@ -49,7 +49,8 @@ class environment_manager {
             $env->keycloakrealm = $data->keycloakrealm;
             $env->keycloakclientid = $data->keycloakclientid;
             $env->keycloakscope = $data->keycloakscope ?? '';
-            $env->slidelogo = $data->slidelogo ?? '';
+            $env->lightlogo = $data->lightlogo ?? '';
+            $env->darklogo = $data->darklogo ?? '';
             $env->auth_token_url = $data->auth_token_url;
             $env->auth_client_id = $data->auth_client_id;
             $env->auth_client_secret = $data->auth_client_secret;
@@ -68,7 +69,8 @@ class environment_manager {
             $env->keycloakrealm = $data->keycloakrealm;
             $env->keycloakclientid = $data->keycloakclientid;
             $env->keycloakscope = $data->keycloakscope ?? '';
-            $env->slidelogo = $data->slidelogo ?? '';
+            $env->lightlogo = $data->lightlogo ?? '';
+            $env->darklogo = $data->darklogo ?? '';
             $env->auth_token_url = $data->auth_token_url;
             $env->auth_client_id = $data->auth_client_id;
             $env->auth_client_secret = $data->auth_client_secret;
@@ -115,8 +117,11 @@ class environment_manager {
         if (!empty($env->keycloakscope)) {
             $params['KEYCLOAK_SCOPE'] = $env->keycloakscope;
         }
-        if (!empty($env->slidelogo)) {
-            $params['SLIDE_LOGO'] = $env->slidelogo;
+        if (!empty($env->lightlogo)) {
+            $params['THEME']['LOGO_LIGHT'] = $env->lightlogo;
+        }
+        if (!empty($env->darklogo)) {
+            $params['THEME']['LOGO_DARK'] = $env->darklogo;
         }
 
         $paramjson = json_encode($params, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
