@@ -218,6 +218,7 @@
     </div>
     {{/haserror}}
     {{/hasaus}}
+
 </div>
 
 <script>
@@ -226,13 +227,26 @@ document.addEventListener('DOMContentLoaded', function() {
     var pkgSelect = document.getElementById('rangeos-package-select');
     var base = '{{baseurl}}';
 
+    var currentShowall = {{#showall}}1{{/showall}}{{^showall}}0{{/showall}};
+    var currentPerpage = {{perpage}};
+
     function buildUrl(params) {
         var sep = base.indexOf('?') >= 0 ? '&' : '?';
         var envid = envSelect ? envSelect.value : '';
         var url = base + sep + 'envid=' + envid;
+        // Track state to keep paging options corect in url
+        var state = {
+            packageid: pkgSelect ? pkgSelect.value : '',
+            showall: currentShowall,
+            perpage: currentPerpage,
+            page: 0
+        };
         for (var k in params) {
-            if (params[k]) {
-                url += '&' + k + '=' + params[k];
+            state[k] = params[k];
+        }
+        for (var k in state) {
+            if (state[k] !== undefined && state[k] !== null) {
+                url += '&' + k + '=' + state[k];
             }
         }
         return url;
@@ -240,17 +254,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (pkgSelect) {
         pkgSelect.addEventListener('change', function() {
-            window.location.href = buildUrl({packageid: pkgSelect.value});
+            window.location.href = buildUrl({packageid: pkgSelect.value, page: 0});
         });
     }
 
+    //The show all button fetches ALL the mappings available, they are not all shown at once. 
+    //The amount shown is based on the Per page drop down.
     var toggleBtn = document.getElementById('rangeos-toggle-filter');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            var showAll = toggleBtn.getAttribute('data-showall');
-            var packageid = pkgSelect ? pkgSelect.value : '';
-            window.location.href = buildUrl({packageid: packageid, showall: showAll});
+            window.location.href = buildUrl({showall: toggleBtn.getAttribute('data-showall'), page: 0});
+        });
+    }
+    // Choose how many to display on screen at a time.
+    var perpageSelect = document.getElementById('rangeos-perpage-select');
+    if (perpageSelect) {
+        perpageSelect.addEventListener('change', function() {
+            window.location.href = buildUrl({perpage: perpageSelect.value, page: 0});
         });
     }
 });
