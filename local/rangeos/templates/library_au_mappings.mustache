@@ -272,14 +272,15 @@
                                 data-autitle="{{title}}"
                                 data-defaultscenarioname="{{scenarioname}}"
                                 title="{{scenarioname}}">
-                            {{#str}}usedefault, local_rangeos{{/str}}: {{scenarioname}}
+                            {{#str}}usedefault, local_rangeos{{/str}}
                         </button>
                         {{/defaultscenariomissing}}
                         {{#defaultscenariomissing}}
-                        <button class="btn btn-sm btn-danger" disabled
-                                title="Scenario not found in this environment">
-                            {{#str}}usedefault, local_rangeos{{/str}}: {{scenarioname}}
-                        </button>
+                        <span title="Not found in this environment: {{scenarioname}}">
+                            <button class="btn btn-sm btn-danger" disabled style="pointer-events:none;">
+                                {{#str}}usedefault, local_rangeos{{/str}}
+                            </button>
+                        </span>
                         {{/defaultscenariomissing}}
                         {{/scenarioname}}
                         {{/ismapped}}

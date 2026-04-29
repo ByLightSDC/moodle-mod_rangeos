@@ -199,20 +199,29 @@ if ($envid > 0) {
         $client = \local_rangeos\api_client::from_environment($envid);
 
         if ($packageid > 0 && !empty($aus)) {
-            // Package mode: fetch mappings per AU.
+            // Package mode: fetch all mappings in bulk then filter to this package's AUs.
+            // This replaces one HTTP call per AU with a small number of paginated calls.
             $scenariouuids = [];
-            foreach ($aus as $au) {
-                $mapping = $client->get_au_mapping($au->auid);
-                if ($mapping) {
-                    $aumappings[$au->auid] = $mapping;
-                    foreach ($mapping['scenarios'] ?? [] as $s) {
+            $bulkpage = 0;
+            do {
+                $bulkresponse = $client->list_au_mappings(['page' => $bulkpage, 'pageSize' => 100]);
+                $bulkitems = $bulkresponse['data'] ?? $bulkresponse['items'] ?? $bulkresponse;
+                foreach ($bulkitems as $m) {
+                    $m = (array) $m;
+                    $auid = $m['auId'] ?? $m['auid'] ?? '';
+                    if (!$auid || !isset($aus[$auid])) {
+                        continue;
+                    }
+                    $aumappings[$auid] = $m;
+                    foreach ($m['scenarios'] ?? [] as $s) {
                         $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
                         if ($uuid) {
                             $scenariouuids[$uuid] = true;
                         }
                     }
                 }
-            }
+                $bulkpage++;
+            } while ($bulkpage < ($bulkresponse['totalPages'] ?? 1));
         } else {
             // All-mappings mode: fetch all AU mappings from the API.
             $scenariouuids = [];
@@ -251,29 +260,36 @@ if ($envid > 0) {
             } while ($page < $totalpages);
         }
 
-        // Fetch all scenarios: resolve UUID→name for existing mappings and build
-        // name→UUID so we can check whether each AU's default scenario exists.
-        $scenariobynamelookup = []; // name => uuid
-        $scenariopage = 0;
-        do {
-            $scenarioresponse = $client->list_content_scenarios([
-                'page' => $scenariopage,
-                'pageSize' => 100,
-            ]);
-            foreach ($scenarioresponse['data'] ?? [] as $s) {
-                $s = (array) $s;
-                $uuid = $s['uuid'] ?? '';
-                $name = $s['name'] ?? '';
-                if ($uuid && isset($scenariouuids[$uuid])) {
-                    $scenariolookup[$uuid] = $name;
+        // Fetch scenarios to resolve UUID→name for badge display, and in package mode
+        // also build name→UUID for the default-scenario existence check.
+        // In all-mappings mode we stop as soon as all referenced UUIDs are resolved.
+        $scenariobynamelookup = []; // name => uuid (package mode only)
+        if (!empty($scenariouuids) || $packageid > 0) {
+            $scenariopage = 0;
+            do {
+                $scenarioresponse = $client->list_content_scenarios([
+                    'page' => $scenariopage,
+                    'pageSize' => 100,
+                ]);
+                foreach ($scenarioresponse['data'] ?? [] as $s) {
+                    $s = (array) $s;
+                    $uuid = $s['uuid'] ?? '';
+                    $name = $s['name'] ?? '';
+                    if ($uuid && isset($scenariouuids[$uuid])) {
+                        $scenariolookup[$uuid] = $name;
+                    }
+                    if ($packageid > 0 && $name && $uuid) {
+                        $scenariobynamelookup[$name] = $uuid;
+                    }
                 }
-                if ($name && $uuid) {
-                    $scenariobynamelookup[$name] = $uuid;
+                $scenariopage++;
+                $scenariototal = $scenarioresponse['totalPages'] ?? 1;
+                // In all-mappings mode, stop early once all referenced UUIDs are resolved.
+                if ($packageid === 0 && count($scenariolookup) >= count($scenariouuids)) {
+                    break;
                 }
-            }
-            $scenariopage++;
-            $scenariototal = $scenarioresponse['totalPages'] ?? 1;
-        } while ($scenariopage < $scenariototal);
+            } while ($scenariopage < $scenariototal);
+        }
     } catch (\Exception $e) {
         $error = $e->getMessage();
     }
