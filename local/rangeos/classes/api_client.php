@@ -18,6 +18,8 @@ namespace local_rangeos;
 
 defined('MOODLE_INTERNAL') || die();
 
+global $CFG;
+require_once($CFG->libdir . '/filelib.php');
 /**
  * HTTP client for the RangeOS devops-api with Keycloak authentication.
  *

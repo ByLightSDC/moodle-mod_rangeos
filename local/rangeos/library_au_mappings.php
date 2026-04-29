@@ -31,9 +31,14 @@ require_login();
 $context = context_system::instance();
 require_capability('local/rangeos:manageaumappings', $context);
 
+// Package ID is the selected package.
 $packageid = optional_param('packageid', 0, PARAM_INT);
 $envid = optional_param('envid', 0, PARAM_INT);
 $showall = optional_param('showall', 0, PARAM_INT);
+// Adding pagination CCUI 2910
+$currentpage = optional_param('page', 0, PARAM_INT);
+$pagesize = optional_param('perpage', 20, PARAM_INT);
+$totalpages = 1; // default, gets overwritten in all-mappings mode
 
 // Handle bulk map-all-defaults action.
 $mapresults = null;
@@ -193,11 +198,13 @@ if ($packageid > 0) {
 // Fetch AU mappings from devops-api.
 $aumappings = []; // auid => mapping data.
 $scenariolookup = []; // uuid => name.
+$scenariouuids = [];
+$client = null;
+$totalitems = null;
 $error = '';
 if ($envid > 0) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
-
         if ($packageid > 0 && !empty($aus)) {
             // Package mode: fetch all mappings in bulk then filter to this package's AUs.
             // This replaces one HTTP call per AU with a small number of paginated calls.
@@ -224,40 +231,37 @@ if ($envid > 0) {
             } while ($bulkpage < ($bulkresponse['totalPages'] ?? 1));
         } else {
             // All-mappings mode: fetch all AU mappings from the API.
+            $start_aumappings = microtime(true);
             $scenariouuids = [];
             $page = 0;
-            do {
-                $response = $client->list_au_mappings([
-                    'page' => $page,
-                    'pageSize' => 100,
-                ]);
-                $items = $response['data'] ?? $response['items'] ?? $response;
-                foreach ($items as $m) {
-                    $m = (array) $m;
-                    $auid = $m['auId'] ?? $m['auid'] ?? '';
-                    if (!$auid) {
-                        continue;
-                    }
-                    $aumappings[$auid] = $m;
-                    // Build a synthetic AU entry if we don't already have one.
-                    if (!isset($aus[$auid])) {
-                        $aus[$auid] = (object) [
-                            'auid' => $auid,
-                            'title' => $m['name'] ?? '',
-                            'url' => '',
-                            'versionid' => 0,
-                        ];
-                    }
-                    foreach ($m['scenarios'] ?? [] as $s) {
-                        $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
-                        if ($uuid) {
-                            $scenariouuids[$uuid] = true;
-                        }
-                    }
+            //Grab up to the selected pagesize.
+            $response = $client->list_au_mappings([
+                'page' => $currentpage,
+                'pageSize' => $pagesize,
+            ]);
+            $items = $response['data'] ?? $response['items'] ?? $response;
+            foreach ($items as $m) {
+                $m = (array) $m;
+                $auid = $m['auId'] ?? $m['auid'] ?? '';
+                if (!$auid) {
+                    continue;
                 }
-                $page++;
-                $totalpages = $response['totalPages'] ?? 1;
-            } while ($page < $totalpages);
+                //Create lookup table of AU mappings by auId. 
+                $aumappings[$auid] = $m;
+                // Build a synthetic AU entry if we don't already have one.
+                // This is another AU mapping lookup table, with slightly different properties.
+                if (!isset($aus[$auid])) {
+                    $aus[$auid] = (object) [
+                        'auid' => $auid,
+                        'title' => $m['name'] ?? '',
+                        'url' => '',
+                        'versionid' => 0,
+                    ];
+                }
+            }
+            $page++;
+            $totalpages = $response['totalPages'] ?? 1;
+            $totalitems = $response['totalCount'] ?? $response['total'] ?? null;
         }
 
         // Fetch scenarios to resolve UUID→name for badge display, and in package mode
@@ -391,6 +395,15 @@ foreach ($aus as $auid => $au) {
 
     $mapping = $aumappings[$au->auid] ?? null;
     $scenarios = $mapping['scenarios'] ?? [];
+
+    // after the filter check, before building the rest of audata
+    foreach ($scenarios as $s) {
+        $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
+        if ($uuid) {
+            $scenariouuids[$uuid] = true;
+        }
+    }
+
     $scenariobadges = [];
     foreach ($scenarios as $s) {
         $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
@@ -474,9 +487,61 @@ foreach ($aus as $auid => $au) {
     ];
 }
 
+// Resolve scenario UUIDs via a single bulk fetch, then update scenario_badges.
+if ($client && !empty($scenariouuids)) {
+    $scenarioresponse = $client->list_content_scenarios(['page' => 0, 'pageSize' => 500]);
+    $scenarioitems = $scenarioresponse['data'] ?? [];
+    foreach ($scenarioitems as $s) {
+        $s = (array) $s;
+        $uuid = $s['uuid'] ?? '';
+        if ($uuid) {
+            $scenariolookup[$uuid] = $s['name'] ?? '';
+        }
+    }
+    foreach ($audata as &$entry) {
+        $scenarios = json_decode($entry['scenarios_json'], true) ?? [];
+        $badges = [];
+        foreach ($scenarios as $s) {
+            $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
+            $name = $scenariolookup[$uuid] ?? '';
+            $badges[] = $name ?: $uuid;
+        }
+        $entry['scenario_badges'] = $badges;
+    }
+    unset($entry);
+}
+
 $baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php'))->out(false);
 
 $hiddencount = $totalaumappings - count($audata);
+
+// Paginate $audata. The API may return more items than pageSize if it ignores the parameter,
+// so we always PHP-slice as a safety net.
+$totalaudata = count($audata);
+if ($packageid === 0 && $totalpages <= 1 && $totalaudata > $pagesize) {
+    // API didn't paginate — derive totalpages from actual item count.
+    $totalpages = (int) ceil($totalaudata / $pagesize);
+}
+if ($totalitems === null) {
+    $totalitems = $totalpages * $pagesize;
+}
+$audata = array_slice($audata, $currentpage * $pagesize, $pagesize);
+$pagecount = count($audata);
+$pagefirst = $currentpage * $pagesize + 1;
+$pagelast = $pagefirst + $pagecount - 1;
+
+
+$pagingurl = new moodle_url('/local/rangeos/library_au_mappings.php', [
+    'envid'     => $envid,
+    'packageid' => $packageid,
+    'showall'   => $showall,
+    'perpage'   => $pagesize,
+]);
+
+$pagesizeoptions = [];
+foreach ([20, 50, 100] as $size) {
+    $pagesizeoptions[] = ['size' => $size, 'selected' => ($size === $pagesize)];
+}
 
 echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'environments' => $envoptions,
@@ -506,6 +571,29 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
         'action' => 'mapalldefaults',
         'sesskey' => sesskey(),
     ]))->out(false),
+    'perpage' => $pagesize,
 ]);
 
+$perpageselect = html_writer::tag(
+    'label',
+    get_string('perpage', 'moodle') . ':',
+    ['for' => 'rangeos-perpage-select', 'class' => 'mr-2 mb-0 small text-muted']
+);
+$perpageselect .= html_writer::select(
+    [20 => '20', 50 => '50', 100 => '100'],
+    'perpage',
+    $pagesize,
+    false,
+    ['id' => 'rangeos-perpage-select', 'class' => 'custom-select custom-select-sm w-auto', 'style' => 'vertical-align: middle;']
+);
+
+// Only show pages if there is more than one page.
+if ($pagecount >= $pagesize || $currentpage > 0) {
+    echo html_writer::tag('style', '.pagination { margin-bottom: 0; }');
+    echo html_writer::div(
+        html_writer::div($perpageselect, 'd-flex align-items-center mr-3') .
+            html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
+        'd-flex align-items-center justify-content-center mt-3'
+    );
+}
 echo $OUTPUT->footer();
