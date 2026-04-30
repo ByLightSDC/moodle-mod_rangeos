@@ -58,6 +58,7 @@ if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
     $mapresults = ['created' => [], 'failed' => [], 'skipped' => 0];
 
     if ($actionenvid > 0) {
+        global $DB;
         $client = \local_rangeos\api_client::from_environment($actionenvid);
 
         // Fetch all existing AU mappings to know which are already mapped.
@@ -91,6 +92,24 @@ if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
 
         // Walk every package's latest-version AUs.
         $packages = $DB->get_records('cmi5_packages', [], '', 'id, title, latestversion');
+
+        // Build auid → primary course name lookup for results display.
+        $aucourselookup = [];
+        $courselookuprows = $DB->get_records_sql(
+            "SELECT DISTINCT pa.auid, co.id AS courseid, co.fullname AS coursename
+               FROM {cmi5_package_aus} pa
+               JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
+               JOIN {cmi5_aus} ca ON ca.auid = pa.auid
+               JOIN {cmi5} c5 ON c5.id = ca.cmi5id
+               JOIN {course} co ON co.id = c5.course
+              ORDER BY co.fullname ASC"
+        );
+        foreach ($courselookuprows as $clr) {
+            if (!isset($aucourselookup[$clr->auid])) {
+                $aucourselookup[$clr->auid] = ['name' => $clr->coursename, 'id' => (int) $clr->courseid];
+            }
+        }
+
         $seenauids = [];
         foreach ($packages as $package) {
             if (empty($package->latestversion)) {
@@ -118,11 +137,20 @@ if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
                     $mapresults['skipped']++;
                     continue;
                 }
+                $entrycourse = $aucourselookup[$auid] ?? ['name' => '', 'id' => 0];
+                $entrycoursename = $entrycourse['name'];
+                $entrycourseid = $entrycourse['id'];
+                $entrypackagetitle = format_string($package->title);
+
                 if (!isset($scenariobynamelookup[$scenarioname])) {
                     $mapresults['failed'][] = [
                         'title'        => $autitle,
+                        'auid'         => $auid,
                         'scenarioname' => $scenarioname,
                         'reason'       => 'Scenario not found in this environment',
+                        'coursename'   => $entrycoursename,
+                        'courseid'     => $entrycourseid,
+                        'packagetitle' => $entrypackagetitle,
                     ];
                     continue;
                 }
@@ -131,14 +159,22 @@ if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
                     $client->create_au_mapping($auid, $pau->title ?? '', [$scenariobynamelookup[$scenarioname]]);
                     $mapresults['created'][] = [
                         'title'        => $autitle,
+                        'auid'         => $auid,
                         'scenarioname' => $scenarioname,
+                        'coursename'   => $entrycoursename,
+                        'courseid'     => $entrycourseid,
+                        'packagetitle' => $entrypackagetitle,
                     ];
                     $mappedauids[$auid] = true;
                 } catch (\Exception $e) {
                     $mapresults['failed'][] = [
                         'title'        => $autitle,
+                        'auid'         => $auid,
                         'scenarioname' => $scenarioname,
                         'reason'       => $e->getMessage(),
+                        'coursename'   => $entrycoursename,
+                        'courseid'     => $entrycourseid,
+                        'packagetitle' => $entrypackagetitle,
                     ];
                 }
             }
@@ -149,6 +185,31 @@ if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
     $mapresults['hasfailed']  = !empty($mapresults['failed']);
     $mapresults['createdcount'] = count($mapresults['created']);
     $mapresults['failedcount']  = count($mapresults['failed']);
+
+    // Group created/failed by course for the template display.
+    foreach (['created', 'failed'] as $resulttype) {
+        $grouped = [];
+        $groupindex = [];
+        foreach ($mapresults[$resulttype] as $entry) {
+            $cn = $entry['coursename'];
+            $cid = $entry['courseid'] ?? 0;
+            $key = $cn !== '' ? $cn : '__none__';
+            if (!isset($groupindex[$key])) {
+                $groupindex[$key] = count($grouped);
+                $grouped[] = [
+                    'coursename' => $cn !== '' ? $cn : 'No local course',
+                    'courseid'   => $cid,
+                    'hascourse'  => ($cn !== ''),
+                    'items'      => [],
+                    'itemcount'  => 0,
+                ];
+            }
+            $idx = $groupindex[$key];
+            $grouped[$idx]['items'][] = $entry;
+            $grouped[$idx]['itemcount']++;
+        }
+        $mapresults[$resulttype . '_by_course'] = $grouped;
+    }
 }
 
 $PAGE->set_context($context);

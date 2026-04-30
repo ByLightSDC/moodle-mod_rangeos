@@ -64,36 +64,56 @@
         <div class="card-header font-weight-bold">Map all defaults — results</div>
         <div class="card-body p-0">
             {{#hascreated}}
-            <div class="px-3 pt-3">
-                <h6 class="text-success">Created ({{createdcount}})</h6>
+            <div class="px-3 py-3{{#hasfailed}} border-bottom{{/hasfailed}}">
+                <h6 class="text-success mb-3">Created ({{createdcount}})</h6>
+                {{#created_by_course}}
+                <p class="mb-1 small font-weight-bold text-muted text-uppercase">
+                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
+                    {{^hascourse}}No local course{{/hascourse}}
+                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                </p>
                 <table class="table table-sm table-bordered mb-3">
-                    <thead><tr><th>AU</th><th>Scenario</th></tr></thead>
+                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th></tr></thead>
                     <tbody>
-                        {{#created}}
+                        {{#items}}
                         <tr>
-                            <td>{{title}}</td>
+                            <td>
+                                {{title}}
+                                <br><code class="small text-muted text-break">{{auid}}</code>
+                            </td>
                             <td>{{scenarioname}}</td>
                         </tr>
-                        {{/created}}
+                        {{/items}}
                     </tbody>
                 </table>
+                {{/created_by_course}}
             </div>
             {{/hascreated}}
             {{#hasfailed}}
-            <div class="px-3 {{#hascreated}}pb-3{{/hascreated}}{{^hascreated}}pt-3 pb-3{{/hascreated}}">
-                <h6 class="text-danger">Failed ({{failedcount}})</h6>
-                <table class="table table-sm table-bordered mb-0">
-                    <thead><tr><th>AU</th><th>Scenario</th><th>Reason</th></tr></thead>
+            <div class="px-3 py-3">
+                <h6 class="text-danger mb-3">Failed ({{failedcount}})</h6>
+                {{#failed_by_course}}
+                <p class="mb-1 small font-weight-bold text-muted text-uppercase">
+                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
+                    {{^hascourse}}No local course{{/hascourse}}
+                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                </p>
+                <table class="table table-sm table-bordered mb-3">
+                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th><th>Reason</th></tr></thead>
                     <tbody>
-                        {{#failed}}
+                        {{#items}}
                         <tr>
-                            <td>{{title}}</td>
+                            <td>
+                                {{title}}
+                                <br><code class="small text-muted text-break">{{auid}}</code>
+                            </td>
                             <td>{{scenarioname}}</td>
                             <td class="text-danger">{{reason}}</td>
                         </tr>
-                        {{/failed}}
+                        {{/items}}
                     </tbody>
                 </table>
+                {{/failed_by_course}}
             </div>
             {{/hasfailed}}
             {{^hascreated}}{{^hasfailed}}
