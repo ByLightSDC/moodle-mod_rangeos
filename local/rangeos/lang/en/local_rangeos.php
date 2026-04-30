@@ -155,6 +155,14 @@ $string['usedefault'] = 'Use default';
 $string['mapalldefaults'] = 'Map all defaults';
 $string['mapalldefaults_desc'] = 'Create mappings for every unmapped AU that has a default scenario set in its RC5 config.';
 
+// Activity environment assignment.
+$string['activityenvironments'] = 'Activity Environments';
+$string['activityenvironments_desc'] = 'View and change which RangeOS environment each cmi5 activity is assigned to, all from one place.';
+$string['activity'] = 'Activity';
+$string['filterbycourse'] = 'Filter by course';
+$string['allcourses'] = 'All courses';
+$string['noactivities'] = 'No cmi5 activities found.';
+
 // Errors.
 $string['error:confignotfound'] = 'config.json not found: {$a}';
 $string['error:configinvalid'] = 'config.json contains invalid JSON: {$a}';

@@ -52,13 +52,51 @@ class observer {
         }
 
         $cmi5 = $DB->get_record('cmi5', ['id' => $cm->instance]);
-        if (!$cmi5 || !empty($cmi5->profileid)) {
+        if (!$cmi5) {
             return;
         }
 
         $defaultprofileid = environment_manager::get_default_profile_id();
-        if ($defaultprofileid) {
+        if ($defaultprofileid && $cmi5->profileid != $defaultprofileid) {
             $DB->set_field('cmi5', 'profileid', $defaultprofileid, ['id' => $cmi5->id]);
+        }
+    }
+
+    /**
+     * Handle course_restored event.
+     *
+     * After a full course restore, assign the default RangeOS environment profile
+     * to any cmi5 activities in the restored course that don't already have the
+     * correct profile. Needed because course_module_created does not fire during restore.
+     *
+     * @param \core\event\course_restored $event The event.
+     */
+    public static function on_course_restored(\core\event\course_restored $event): void {
+        global $DB;
+
+        $defaultprofileid = environment_manager::get_default_profile_id();
+        if (!$defaultprofileid) {
+            return;
+        }
+
+        $courseid = $event->objectid;
+
+        $moduleid = $DB->get_field('modules', 'id', ['name' => 'cmi5']);
+        if (!$moduleid) {
+            return;
+        }
+
+        $cmi5ids = $DB->get_fieldset_sql(
+            "SELECT c.id FROM {cmi5} c
+               JOIN {course_modules} cm ON cm.instance = c.id AND cm.module = :moduleid
+              WHERE c.course = :courseid",
+            ['moduleid' => $moduleid, 'courseid' => $courseid]
+        );
+
+        foreach ($cmi5ids as $cmi5id) {
+            $DB->set_field_select('cmi5', 'profileid', $defaultprofileid,
+                'id = :id AND (profileid IS NULL OR profileid != :profileid)',
+                ['id' => $cmi5id, 'profileid' => $defaultprofileid]);
         }
     }
 

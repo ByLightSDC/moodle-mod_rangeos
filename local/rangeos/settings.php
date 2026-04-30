@@ -45,4 +45,12 @@ if ($hassiteconfig) {
         'local/rangeos:manageaumappings'
     ));
 
+    // Activity environment assignment page.
+    $ADMIN->add('local_rangeos', new admin_externalpage(
+        'local_rangeos_activity_environments',
+        get_string('activityenvironments', 'local_rangeos'),
+        new moodle_url('/local/rangeos/activity_environments.php'),
+        'local/rangeos:manageenvironments'
+    ));
+
 }

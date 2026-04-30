@@ -1,0 +1,84 @@
+{{!
+    Activity environment assignment page.
+
+    @template   local_rangeos/activity_environments
+    @copyright  2026 Bylight
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+<div data-baseurl="{{baseurl}}">
+
+    {{#noenvironments}}
+    <div class="alert alert-warning">
+        {{#str}}noenvironments, local_rangeos{{/str}}
+    </div>
+    {{/noenvironments}}
+
+    {{#hasenvironments}}
+
+    <p class="text-muted">{{#str}}activityenvironments_desc, local_rangeos{{/str}}</p>
+
+    {{#hascourses}}
+    <div class="form-group row mb-4">
+        <label for="rangeos-course-filter" class="col-sm-2 col-form-label font-weight-bold">
+            {{#str}}filterbycourse, local_rangeos{{/str}}
+        </label>
+        <div class="col-sm-4">
+            <select id="rangeos-course-filter" class="custom-select" data-action="filter-course">
+                {{#courseoptions}}
+                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                {{/courseoptions}}
+            </select>
+        </div>
+    </div>
+    {{/hascourses}}
+
+    {{#hasactivities}}
+    <div id="rangeos-activity-env-status" class="mb-2" style="min-height:1.5rem;"></div>
+    <table class="table table-striped table-hover" id="rangeos-activity-env-table">
+        <thead class="thead-light">
+            <tr>
+                <th>{{#str}}course{{/str}}</th>
+                <th>{{#str}}activity, local_rangeos{{/str}}</th>
+                <th>{{#str}}environment, local_rangeos{{/str}}</th>
+                <th>{{#str}}actions{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#activities}}
+            <tr data-cmi5id="{{cmi5id}}" data-current-envid="{{currentenvid}}">
+                <td>
+                    <a href="{{activityurl}}" class="text-muted small">{{coursename}}</a>
+                </td>
+                <td>
+                    <a href="{{activityurl}}">{{activityname}}</a>
+                </td>
+                <td>
+                    <select class="custom-select custom-select-sm"
+                            data-action="assign-environment"
+                            data-cmi5id="{{cmi5id}}"
+                            style="min-width:180px;">
+                        {{#envoptions}}
+                        <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                        {{/envoptions}}
+                    </select>
+                    <span class="rangeos-save-indicator ml-2" style="display:none;"></span>
+                </td>
+                <td>
+                    <a href="{{settingsurl}}" class="btn btn-sm btn-outline-secondary" title="{{#str}}settings{{/str}}">
+                        &#9881;
+                    </a>
+                </td>
+            </tr>
+            {{/activities}}
+        </tbody>
+    </table>
+    {{/hasactivities}}
+
+    {{^hasactivities}}
+    <div class="alert alert-info">
+        {{#str}}noactivities, local_rangeos{{/str}}
+    </div>
+    {{/hasactivities}}
+
+    {{/hasenvironments}}
+</div>

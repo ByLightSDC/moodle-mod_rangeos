@@ -74,6 +74,15 @@ if ($canmanageaus) {
     ];
 }
 
+if ($canmanageenv) {
+    $items[] = [
+        'url' => new moodle_url('/local/rangeos/activity_environments.php'),
+        'icon' => 'i/settings',
+        'title' => get_string('activityenvironments', 'local_rangeos'),
+        'desc' => get_string('activityenvironments_desc', 'local_rangeos'),
+    ];
+}
+
 // Render as a card grid.
 echo html_writer::start_div('container-fluid mt-3');
 echo html_writer::start_div('row');

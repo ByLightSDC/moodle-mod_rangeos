@@ -25,4 +25,8 @@ $observers = [
         'eventname' => '\core\event\course_module_created',
         'callback' => '\local_rangeos\observer::on_course_module_created',
     ],
+    [
+        'eventname' => '\core\event\course_restored',
+        'callback' => '\local_rangeos\observer::on_course_restored',
+    ],
 ];
