@@ -17,10 +17,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_rangeos';
-$plugin->version = 2026042315;
+$plugin->version = 2026042316;
 $plugin->requires = 2024100700; // Moodle 4.5+.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.2.0';
+$plugin->release = '0.2.1';
 $plugin->dependencies = [
     'mod_cmi5' => 2026022601,
 ];

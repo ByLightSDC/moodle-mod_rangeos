@@ -45,170 +45,15 @@ $mapresults = null;
 if (optional_param('action', '', PARAM_ALPHA) === 'mapalldefaults') {
     require_sesskey();
 
-    // Resolve envid to a usable value.
-    $actionenvid = $envid;
-    if ($actionenvid === 0) {
+    if ($envid === 0) {
         $default = environment_manager::get_default_environment();
         if ($default) {
-            $actionenvid = $default->id;
-            $envid = $actionenvid;
+            $envid = $default->id;
         }
     }
 
-    $mapresults = ['created' => [], 'failed' => [], 'skipped' => 0];
-
-    if ($actionenvid > 0) {
-        global $DB;
-        $client = \local_rangeos\api_client::from_environment($actionenvid);
-
-        // Fetch all existing AU mappings to know which are already mapped.
-        $mappedauids = [];
-        $mappage = 0;
-        do {
-            $mapresponse = $client->list_au_mappings(['page' => $mappage, 'pageSize' => 100]);
-            foreach ($mapresponse['data'] ?? $mapresponse['items'] ?? $mapresponse as $m) {
-                $m = (array) $m;
-                $auid = $m['auId'] ?? $m['auid'] ?? '';
-                if ($auid) {
-                    $mappedauids[$auid] = true;
-                }
-            }
-            $mappage++;
-        } while ($mappage < ($mapresponse['totalPages'] ?? 1));
-
-        // Fetch all content scenarios for a name → UUID lookup.
-        $scenariobynamelookup = [];
-        $scpage = 0;
-        do {
-            $scresponse = $client->list_content_scenarios(['page' => $scpage, 'pageSize' => 100]);
-            foreach ($scresponse['data'] ?? [] as $s) {
-                $s = (array) $s;
-                if (!empty($s['name']) && !empty($s['uuid'])) {
-                    $scenariobynamelookup[$s['name']] = $s['uuid'];
-                }
-            }
-            $scpage++;
-        } while ($scpage < ($scresponse['totalPages'] ?? 1));
-
-        // Walk every package's latest-version AUs.
-        $packages = $DB->get_records('cmi5_packages', [], '', 'id, title, latestversion');
-
-        // Build auid → primary course name lookup for results display.
-        $aucourselookup = [];
-        $courselookuprows = $DB->get_records_sql(
-            "SELECT DISTINCT pa.auid, co.id AS courseid, co.fullname AS coursename
-               FROM {cmi5_package_aus} pa
-               JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
-               JOIN {cmi5_aus} ca ON ca.auid = pa.auid
-               JOIN {cmi5} c5 ON c5.id = ca.cmi5id
-               JOIN {course} co ON co.id = c5.course
-              ORDER BY co.fullname ASC"
-        );
-        foreach ($courselookuprows as $clr) {
-            if (!isset($aucourselookup[$clr->auid])) {
-                $aucourselookup[$clr->auid] = ['name' => $clr->coursename, 'id' => (int) $clr->courseid];
-            }
-        }
-
-        $seenauids = [];
-        foreach ($packages as $package) {
-            if (empty($package->latestversion)) {
-                continue;
-            }
-            $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $package->latestversion], 'sortorder ASC');
-            foreach ($packageaus as $pau) {
-                $auid = $pau->auid ?? '';
-                if (!$auid || isset($seenauids[$auid])) {
-                    continue;
-                }
-                $seenauids[$auid] = true;
-
-                if (empty($pau->url)) {
-                    continue;
-                }
-                $config = content_patcher::get_au_config((int) $package->latestversion, $pau->url);
-                if ($config === null || empty($config['rangeosScenarioName'])) {
-                    continue;
-                }
-                $scenarioname = $config['rangeosScenarioName'];
-                $autitle = format_string($pau->title ?? $auid);
-
-                if (isset($mappedauids[$auid])) {
-                    $mapresults['skipped']++;
-                    continue;
-                }
-                $entrycourse = $aucourselookup[$auid] ?? ['name' => '', 'id' => 0];
-                $entrycoursename = $entrycourse['name'];
-                $entrycourseid = $entrycourse['id'];
-                $entrypackagetitle = format_string($package->title);
-
-                if (!isset($scenariobynamelookup[$scenarioname])) {
-                    $mapresults['failed'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'reason'       => 'Scenario not found in this environment',
-                        'coursename'   => $entrycoursename,
-                        'courseid'     => $entrycourseid,
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                    continue;
-                }
-
-                try {
-                    $client->create_au_mapping($auid, $pau->title ?? '', [$scenariobynamelookup[$scenarioname]]);
-                    $mapresults['created'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'coursename'   => $entrycoursename,
-                        'courseid'     => $entrycourseid,
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                    $mappedauids[$auid] = true;
-                } catch (\Exception $e) {
-                    $mapresults['failed'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'reason'       => $e->getMessage(),
-                        'coursename'   => $entrycoursename,
-                        'courseid'     => $entrycourseid,
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                }
-            }
-        }
-    }
-
-    $mapresults['hascreated'] = !empty($mapresults['created']);
-    $mapresults['hasfailed']  = !empty($mapresults['failed']);
-    $mapresults['createdcount'] = count($mapresults['created']);
-    $mapresults['failedcount']  = count($mapresults['failed']);
-
-    // Group created/failed by course for the template display.
-    foreach (['created', 'failed'] as $resulttype) {
-        $grouped = [];
-        $groupindex = [];
-        foreach ($mapresults[$resulttype] as $entry) {
-            $cn = $entry['coursename'];
-            $cid = $entry['courseid'] ?? 0;
-            $key = $cn !== '' ? $cn : '__none__';
-            if (!isset($groupindex[$key])) {
-                $groupindex[$key] = count($grouped);
-                $grouped[] = [
-                    'coursename' => $cn !== '' ? $cn : 'No local course',
-                    'courseid'   => $cid,
-                    'hascourse'  => ($cn !== ''),
-                    'items'      => [],
-                    'itemcount'  => 0,
-                ];
-            }
-            $idx = $groupindex[$key];
-            $grouped[$idx]['items'][] = $entry;
-            $grouped[$idx]['itemcount']++;
-        }
-        $mapresults[$resulttype . '_by_course'] = $grouped;
+    if ($envid > 0) {
+        $mapresults = \local_rangeos\au_mapping_manager::map_all_defaults($envid);
     }
 }
 
@@ -233,8 +78,18 @@ if ($envid === 0) {
 
 global $DB;
 
+$_perf_start = microtime(true);
+$_perf = debugging('', DEBUG_NORMAL)
+    ? static function (string $label, float $start, string $context = ''): void {
+        $ms = round((microtime(true) - $start) * 1000, 1);
+        error_log(sprintf('[rangeos_perf] %-55s %7.1fms%s', $label, $ms, $context ? "  ($context)" : ''));
+    }
+    : static function (string $_label, float $_start, string $_context = ''): void {};
+
 // Load packages list for the filter selector.
+$_t = microtime(true);
 $packages = $DB->get_records('cmi5_packages', [], 'title ASC', 'id, title, latestversion');
+$_perf('DB: load packages list', $_t, count($packages) . ' packages');
 
 // Determine which AUs to show: filtered by package, or all from the API.
 $aus = []; // auid => {auid, title, url, versionid}
@@ -243,12 +98,16 @@ $versionid = 0;
 
 if ($packageid > 0) {
     // Package-filtered mode: show AUs from this specific package.
+    $_t = microtime(true);
     $package = $DB->get_record('cmi5_packages', ['id' => $packageid]);
+    $_perf('DB: load package record', $_t);
     if ($package) {
         $packagetitle = $package->title;
         $versionid = $package->latestversion;
         if ($versionid) {
+            $_t = microtime(true);
             $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
+            $_perf('DB: load package AUs', $_t, count($packageaus) . ' AUs');
             foreach ($packageaus as $pau) {
                 $aus[$pau->auid] = $pau;
             }
@@ -267,50 +126,46 @@ if ($envid > 0) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
         if ($packageid > 0 && !empty($aus)) {
-            // Package mode: fetch all mappings in bulk then filter to this package's AUs.
-            // This replaces one HTTP call per AU with a small number of paginated calls.
+            // Package mode: fetch all mappings in one call and filter to this package's AUs.
+            // The API returns the full list regardless of limit, so a single large-limit call
+            // avoids the loop running once per totalPages (which is based on its internal default).
             $scenariouuids = [];
-            $bulkpage = 0;
-            do {
-                $bulkresponse = $client->list_au_mappings(['page' => $bulkpage, 'pageSize' => 100]);
-                $bulkitems = $bulkresponse['data'] ?? $bulkresponse['items'] ?? $bulkresponse;
-                foreach ($bulkitems as $m) {
-                    $m = (array) $m;
-                    $auid = $m['auId'] ?? $m['auid'] ?? '';
-                    if (!$auid || !isset($aus[$auid])) {
-                        continue;
-                    }
-                    $aumappings[$auid] = $m;
-                    foreach ($m['scenarios'] ?? [] as $s) {
-                        $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
-                        if ($uuid) {
-                            $scenariouuids[$uuid] = true;
-                        }
+            $_t = microtime(true);
+            $bulkresponse = $client->list_au_mappings(['limit' => 1000]);
+            $bulkitems = $bulkresponse['data'] ?? $bulkresponse['items'] ?? $bulkresponse;
+            foreach ($bulkitems as $m) {
+                $m = (array) $m;
+                $auid = $m['auId'] ?? $m['auid'] ?? '';
+                if (!$auid || !isset($aus[$auid])) {
+                    continue;
+                }
+                $aumappings[$auid] = $m;
+                foreach ($m['scenarios'] ?? [] as $s) {
+                    $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
+                    if ($uuid) {
+                        $scenariouuids[$uuid] = true;
                     }
                 }
-                $bulkpage++;
-            } while ($bulkpage < ($bulkresponse['totalPages'] ?? 1));
+            }
+            $_perf('API: list_au_mappings (package mode)', $_t, count($bulkitems) . ' total, ' . count($aumappings) . ' matched');
         } else {
             // All-mappings mode: fetch all AU mappings from the API.
-            $start_aumappings = microtime(true);
             $scenariouuids = [];
             $page = 0;
-            //Grab up to the selected pagesize.
+            $_t = microtime(true);
             $response = $client->list_au_mappings([
                 'page' => $currentpage,
                 'pageSize' => $pagesize,
             ]);
             $items = $response['data'] ?? $response['items'] ?? $response;
+            $_perf('API: list_au_mappings (all-mappings mode)', $_t, count($items) . ' items, page ' . $currentpage);
             foreach ($items as $m) {
                 $m = (array) $m;
                 $auid = $m['auId'] ?? $m['auid'] ?? '';
                 if (!$auid) {
                     continue;
                 }
-                //Create lookup table of AU mappings by auId. 
                 $aumappings[$auid] = $m;
-                // Build a synthetic AU entry if we don't already have one.
-                // This is another AU mapping lookup table, with slightly different properties.
                 if (!isset($aus[$auid])) {
                     $aus[$auid] = (object) [
                         'auid' => $auid,
@@ -325,35 +180,25 @@ if ($envid > 0) {
             $totalitems = $response['totalCount'] ?? $response['total'] ?? null;
         }
 
-        // Fetch scenarios to resolve UUID→name for badge display, and in package mode
-        // also build name→UUID for the default-scenario existence check.
-        // In all-mappings mode we stop as soon as all referenced UUIDs are resolved.
+        // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
+        // The paginated approach was making ~100 calls due to totalPages being based on the
+        // API's internal default page size, not our requested pageSize.
         $scenariobynamelookup = []; // name => uuid (package mode only)
         if (!empty($scenariouuids) || $packageid > 0) {
-            $scenariopage = 0;
-            do {
-                $scenarioresponse = $client->list_content_scenarios([
-                    'page' => $scenariopage,
-                    'pageSize' => 100,
-                ]);
-                foreach ($scenarioresponse['data'] ?? [] as $s) {
-                    $s = (array) $s;
-                    $uuid = $s['uuid'] ?? '';
-                    $name = $s['name'] ?? '';
-                    if ($uuid && isset($scenariouuids[$uuid])) {
-                        $scenariolookup[$uuid] = $name;
-                    }
-                    if ($packageid > 0 && $name && $uuid) {
-                        $scenariobynamelookup[$name] = $uuid;
-                    }
+            $_t = microtime(true);
+            $scenarioresponse = $client->list_content_scenarios(['limit' => 1000]);
+            foreach ($scenarioresponse['data'] ?? [] as $s) {
+                $s = (array) $s;
+                $uuid = $s['uuid'] ?? '';
+                $name = $s['name'] ?? '';
+                if ($uuid && isset($scenariouuids[$uuid])) {
+                    $scenariolookup[$uuid] = $name;
                 }
-                $scenariopage++;
-                $scenariototal = $scenarioresponse['totalPages'] ?? 1;
-                // In all-mappings mode, stop early once all referenced UUIDs are resolved.
-                if ($packageid === 0 && count($scenariolookup) >= count($scenariouuids)) {
-                    break;
+                if ($packageid > 0 && $name && $uuid) {
+                    $scenariobynamelookup[$name] = $uuid;
                 }
-            } while ($scenariopage < $scenariototal);
+            }
+            $_perf('API: list_content_scenarios', $_t, count($scenarioresponse['data'] ?? []) . ' items, ' . count($scenariolookup) . ' resolved');
         }
     } catch (\Exception $e) {
         $error = $e->getMessage();
@@ -446,6 +291,12 @@ if ($packageid === 0 && !empty($allauids)) {
     }
 }
 
+// Pre-fetch all config.json files for the selected package in one query instead of one per AU.
+$allauconfigs = [];
+if ($packageid > 0 && $versionid > 0) {
+    $allauconfigs = content_patcher::get_all_au_configs($versionid);
+}
+
 $audata = [];
 $totalaumappings = count($aus);
 foreach ($aus as $auid => $au) {
@@ -479,7 +330,9 @@ foreach ($aus as $auid => $au) {
     $scenarioname = '';
     $auversionid = ($packageid > 0) ? $versionid : ($au->versionid ?? 0);
     if (!empty($auversionid) && !empty($au->url)) {
-        $config = content_patcher::get_au_config($auversionid, $au->url);
+        $config = !empty($allauconfigs)
+            ? ($allauconfigs[content_patcher::au_url_to_filepath($au->url)] ?? null)
+            : content_patcher::get_au_config($auversionid, $au->url);
         if ($config !== null && !empty($config['rangeosScenarioUUID'])) {
             $israngeos = true;
             $scenarioname = $config['rangeosScenarioName'] ?? '';
@@ -548,8 +401,9 @@ foreach ($aus as $auid => $au) {
     ];
 }
 
-// Resolve scenario UUIDs via a single bulk fetch, then update scenario_badges.
-if ($client && !empty($scenariouuids)) {
+// In all-mappings mode, scenario UUIDs are only known after the AU loop above, so we fetch
+// scenarios here. In package mode the first fetch (above) already resolved everything — skip.
+if ($packageid === 0 && $client && !empty($scenariouuids)) {
     $scenarioresponse = $client->list_content_scenarios(['page' => 0, 'pageSize' => 500]);
     $scenarioitems = $scenarioresponse['data'] ?? [];
     foreach ($scenarioitems as $s) {
