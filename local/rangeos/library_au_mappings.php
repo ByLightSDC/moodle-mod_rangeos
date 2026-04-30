@@ -127,8 +127,6 @@ if ($envid > 0) {
         $client = \local_rangeos\api_client::from_environment($envid);
         if ($packageid > 0 && !empty($aus)) {
             // Package mode: fetch all mappings in one call and filter to this package's AUs.
-            // The API returns the full list regardless of limit, so a single large-limit call
-            // avoids the loop running once per totalPages (which is based on its internal default).
             $scenariouuids = [];
             $_t = microtime(true);
             $bulkresponse = $client->list_au_mappings(['limit' => 1000]);
@@ -181,8 +179,6 @@ if ($envid > 0) {
         }
 
         // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
-        // The paginated approach was making ~100 calls due to totalPages being based on the
-        // API's internal default page size, not our requested pageSize.
         $scenariobynamelookup = []; // name => uuid (package mode only)
         if (!empty($scenariouuids) || $packageid > 0) {
             $_t = microtime(true);
@@ -205,7 +201,6 @@ if ($envid > 0) {
     }
 }
 
-// In all-mappings mode, also look up AU titles from local cmi5_aus table for any AUs missing titles.
 if ($packageid === 0 && !empty($aus)) {
     $auids = array_keys($aus);
     list($insql, $inparams) = $DB->get_in_or_equal($auids, SQL_PARAMS_NAMED);
