@@ -70,9 +70,8 @@ if ($envid > 0) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
 
-        // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
         $_t = microtime(true);
-        $scenarioresponse = $client->list_content_scenarios(['limit' => 10000]);
+        $scenarioresponse = $client->list_content_scenarios(['limit' => 1000]);
         foreach ($scenarioresponse['data'] ?? [] as $s) {
             $s = (array) $s;
             $uuid = $s['uuid'] ?? '';
