@@ -53,6 +53,14 @@ if ($envid === 0) {
     }
 }
 
+$_perf_start = microtime(true);
+$_perf = debugging('', DEBUG_NORMAL)
+    ? static function (string $label, float $start, string $context = ''): void {
+        $ms = round((microtime(true) - $start) * 1000, 1);
+        error_log(sprintf('[rangeos_perf] %-55s %7.1fms%s', $label, $ms, $context ? "  ($context)" : ''));
+    }
+    : static function (string $_label, float $_start, string $_context = ''): void {};
+
 // Fetch data from APIs.
 $mappings = [];
 $totalcount = 0;
@@ -62,33 +70,28 @@ if ($envid > 0) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
 
-        // Build scenario UUID→name lookup from content API (scenario library).
-        $scenariopage = 0;
-        do {
-            $scenarioresponse = $client->list_content_scenarios([
-                'page' => $scenariopage,
-                'pageSize' => 100,
-            ]);
-            $scenarioitems = $scenarioresponse['data'] ?? [];
-            foreach ($scenarioitems as $s) {
-                $s = (array) $s;
-                $uuid = $s['uuid'] ?? '';
-                $name = $s['name'] ?? '';
-                if ($uuid) {
-                    $scenariolookup[$uuid] = $name;
-                }
+        // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
+        $_t = microtime(true);
+        $scenarioresponse = $client->list_content_scenarios(['limit' => 10000]);
+        foreach ($scenarioresponse['data'] ?? [] as $s) {
+            $s = (array) $s;
+            $uuid = $s['uuid'] ?? '';
+            $name = $s['name'] ?? '';
+            if ($uuid) {
+                $scenariolookup[$uuid] = $name;
             }
-            $scenariopage++;
-            $scenariototal = $scenarioresponse['totalPages'] ?? 1;
-        } while ($scenariopage < $scenariototal);
+        }
+        $_perf('API: list_content_scenarios', $_t, count($scenarioresponse['data'] ?? []) . ' items');
 
-        // Get AU mappings.
+        // Get AU mappings for current page.
+        $_t = microtime(true);
         $response = $client->list_au_mappings([
             'page' => $page,
             'pageSize' => $pagesize,
         ]);
         $mappings = $response['data'] ?? $response['items'] ?? $response;
         $totalcount = $response['totalCount'] ?? $response['total'] ?? count($mappings);
+        $_perf('API: list_au_mappings', $_t, count($mappings) . ' items, page ' . $page);
     } catch (\Exception $e) {
         $error = $e->getMessage();
     }
@@ -105,7 +108,6 @@ foreach ($mappings as $m) {
     }
 }
 if (!empty($allauids)) {
-    // Find matching AUs in cmi5_aus, joined with cmi5 and course.
     global $DB;
     list($insql, $inparams) = $DB->get_in_or_equal($allauids, SQL_PARAMS_NAMED);
     $sql = "SELECT ca.id, ca.auid, ca.title AS autitle, c5.id AS cmi5id, c5.name AS activityname,
@@ -118,7 +120,9 @@ if (!empty($allauids)) {
               JOIN {course} co ON co.id = c5.course
              WHERE ca.auid {$insql}
           ORDER BY co.fullname, c5.name";
+    $_t = microtime(true);
     $records = $DB->get_records_sql($sql, $inparams);
+    $_perf('DB: AU activity lookup', $_t, count($records) . ' rows, ' . count($allauids) . ' AUs');
     foreach ($records as $rec) {
         if (!isset($aulookup[$rec->auid])) {
             $aulookup[$rec->auid] = [];

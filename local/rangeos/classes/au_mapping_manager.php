@@ -101,6 +101,175 @@ class au_mapping_manager {
     }
 
     /**
+     * Map all library AUs that declare a default RangeOS scenario to their matching scenario.
+     *
+     * Walks every package's latest-version AUs, reads config.json in bulk per package,
+     * and creates a mapping for any AU that has a rangeosScenarioName and is not yet mapped.
+     *
+     * Returns a results array ready for template rendering, with keys:
+     *   created, failed, skipped, hascreated, hasfailed, createdcount, failedcount,
+     *   created_by_course, failed_by_course.
+     *
+     * @param int $envid Environment ID.
+     * @return array Results array.
+     */
+    public static function map_all_defaults(int $envid): array {
+        global $DB;
+
+        $client = api_client::from_environment($envid);
+
+        // Fetch all existing AU mappings to know which are already mapped.
+        $mappedauids = [];
+        $mappage = 0;
+        do {
+            $mapresponse = $client->list_au_mappings(['page' => $mappage, 'pageSize' => 500]);
+            foreach ($mapresponse['data'] ?? $mapresponse['items'] ?? $mapresponse as $m) {
+                $m = (array) $m;
+                $auid = $m['auId'] ?? $m['auid'] ?? '';
+                if ($auid) {
+                    $mappedauids[$auid] = true;
+                }
+            }
+            $mappage++;
+        } while ($mappage < ($mapresponse['totalPages'] ?? 1));
+
+        // Fetch all content scenarios for a name → UUID lookup.
+        $scenariobynamelookup = [];
+        $scpage = 0;
+        do {
+            $scresponse = $client->list_content_scenarios(['page' => $scpage, 'pageSize' => 100]);
+            foreach ($scresponse['data'] ?? [] as $s) {
+                $s = (array) $s;
+                if (!empty($s['name']) && !empty($s['uuid'])) {
+                    $scenariobynamelookup[$s['name']] = $s['uuid'];
+                }
+            }
+            $scpage++;
+        } while ($scpage < ($scresponse['totalPages'] ?? 1));
+
+        // Build auid → primary course info lookup for results display.
+        $aucourselookup = [];
+        $courselookuprows = $DB->get_records_sql(
+            "SELECT DISTINCT pa.auid, co.id AS courseid, co.fullname AS coursename
+               FROM {cmi5_package_aus} pa
+               JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
+               JOIN {cmi5_aus} ca ON ca.auid = pa.auid
+               JOIN {cmi5} c5 ON c5.id = ca.cmi5id
+               JOIN {course} co ON co.id = c5.course
+              ORDER BY co.fullname ASC"
+        );
+        foreach ($courselookuprows as $clr) {
+            if (!isset($aucourselookup[$clr->auid])) {
+                $aucourselookup[$clr->auid] = ['name' => $clr->coursename, 'id' => (int) $clr->courseid];
+            }
+        }
+
+        $packages = $DB->get_records('cmi5_packages', [], '', 'id, title, latestversion');
+        $results = ['created' => [], 'failed' => [], 'skipped' => 0];
+        $seenauids = [];
+
+        foreach ($packages as $package) {
+            if (empty($package->latestversion)) {
+                continue;
+            }
+            $versionid = (int) $package->latestversion;
+            $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
+
+            // Bulk-fetch all config.json files for this package in one query.
+            $allauconfigs = content_patcher::get_all_au_configs($versionid);
+
+            foreach ($packageaus as $pau) {
+                $auid = $pau->auid ?? '';
+                if (!$auid || isset($seenauids[$auid]) || empty($pau->url)) {
+                    continue;
+                }
+                $seenauids[$auid] = true;
+
+                $config = $allauconfigs[content_patcher::au_url_to_filepath($pau->url)] ?? null;
+                if ($config === null || empty($config['rangeosScenarioName'])) {
+                    continue;
+                }
+
+                $scenarioname = $config['rangeosScenarioName'];
+                $autitle = format_string($pau->title ?? $auid);
+                $entrycourse = $aucourselookup[$auid] ?? ['name' => '', 'id' => 0];
+                $entrypackagetitle = format_string($package->title);
+
+                if (isset($mappedauids[$auid])) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                if (!isset($scenariobynamelookup[$scenarioname])) {
+                    $results['failed'][] = [
+                        'title'        => $autitle,
+                        'auid'         => $auid,
+                        'scenarioname' => $scenarioname,
+                        'reason'       => 'Scenario not found in this environment',
+                        'coursename'   => $entrycourse['name'],
+                        'courseid'     => $entrycourse['id'],
+                        'packagetitle' => $entrypackagetitle,
+                    ];
+                    continue;
+                }
+
+                try {
+                    $client->create_au_mapping($auid, $pau->title ?? '', [$scenariobynamelookup[$scenarioname]]);
+                    $results['created'][] = [
+                        'title'        => $autitle,
+                        'auid'         => $auid,
+                        'scenarioname' => $scenarioname,
+                        'coursename'   => $entrycourse['name'],
+                        'courseid'     => $entrycourse['id'],
+                        'packagetitle' => $entrypackagetitle,
+                    ];
+                    $mappedauids[$auid] = true;
+                } catch (\Exception $e) {
+                    $results['failed'][] = [
+                        'title'        => $autitle,
+                        'auid'         => $auid,
+                        'scenarioname' => $scenarioname,
+                        'reason'       => $e->getMessage(),
+                        'coursename'   => $entrycourse['name'],
+                        'courseid'     => $entrycourse['id'],
+                        'packagetitle' => $entrypackagetitle,
+                    ];
+                }
+            }
+        }
+
+        $results['hascreated']   = !empty($results['created']);
+        $results['hasfailed']    = !empty($results['failed']);
+        $results['createdcount'] = \count($results['created']);
+        $results['failedcount']  = \count($results['failed']);
+
+        foreach (['created', 'failed'] as $type) {
+            $grouped = [];
+            $groupindex = [];
+            foreach ($results[$type] as $entry) {
+                $cn  = $entry['coursename'];
+                $key = $cn !== '' ? $cn : '__none__';
+                if (!isset($groupindex[$key])) {
+                    $groupindex[$key] = \count($grouped);
+                    $grouped[] = [
+                        'coursename' => $cn !== '' ? $cn : 'No local course',
+                        'courseid'   => $entry['courseid'] ?? 0,
+                        'hascourse'  => ($cn !== ''),
+                        'items'      => [],
+                        'itemcount'  => 0,
+                    ];
+                }
+                $idx = $groupindex[$key];
+                $grouped[$idx]['items'][] = $entry;
+                $grouped[$idx]['itemcount']++;
+            }
+            $results["{$type}_by_course"] = $grouped;
+        }
+
+        return $results;
+    }
+
+    /**
      * Get a summary of unmapped AUs for an activity.
      *
      * @param int $cmi5id cmi5 activity instance ID.

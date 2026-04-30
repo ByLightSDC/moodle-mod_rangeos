@@ -140,27 +140,64 @@ class content_patcher {
      * @param string $auurl The AU URL from cmi5_package_aus.url.
      * @return \stored_file|null The file object, or null if not found.
      */
+    /**
+     * Derive the Moodle file API filepath for an AU's directory from its launch URL.
+     *
+     * E.g. 'cyber-101/index.html' → '/cyber-101/'
+     *
+     * @param string $auurl The AU URL from cmi5_package_aus.url.
+     * @return string Moodle filepath string (always starts and ends with '/').
+     */
+    public static function au_url_to_filepath(string $auurl): string {
+        $dir = dirname($auurl);
+        if ($dir === '' || $dir === '.') {
+            return '/';
+        }
+        $filepath = '/' . ltrim($dir, '/');
+        if (substr($filepath, -1) !== '/') {
+            $filepath .= '/';
+        }
+        return $filepath;
+    }
+
+    /**
+     * Pre-fetch every AU config.json for a package version in a single file-storage query.
+     *
+     * Returns an array keyed by Moodle filepath (e.g. '/cyber-101/') so callers can look up
+     * a config without an extra per-AU query.
+     *
+     * @param int $versionid The package version ID (itemid in file storage).
+     * @return array<string, array> filepath => decoded config, omitting files with invalid JSON.
+     */
+    public static function get_all_au_configs(int $versionid): array {
+        $fs = get_file_storage();
+        $syscontext = \context_system::instance();
+        $files = $fs->get_area_files(
+            $syscontext->id, 'mod_cmi5', 'library_content', $versionid, 'filepath', false
+        );
+        $configs = [];
+        foreach ($files as $file) {
+            if ($file->get_filename() !== 'config.json') {
+                continue;
+            }
+            $decoded = json_decode($file->get_content(), true);
+            if ($decoded !== null || json_last_error() === JSON_ERROR_NONE) {
+                $configs[$file->get_filepath()] = $decoded;
+            }
+        }
+        return $configs;
+    }
+
     private static function get_config_file(int $versionid, string $auurl): ?\stored_file {
         $fs = get_file_storage();
         $syscontext = \context_system::instance();
-
-        // Derive directory from AU URL.
-        $dir = dirname($auurl);
-        if ($dir === '' || $dir === '.') {
-            $filepath = '/';
-        } else {
-            $filepath = '/' . ltrim($dir, '/');
-            if (substr($filepath, -1) !== '/') {
-                $filepath .= '/';
-            }
-        }
 
         $file = $fs->get_file(
             $syscontext->id,
             'mod_cmi5',
             'library_content',
             $versionid,
-            $filepath,
+            self::au_url_to_filepath($auurl),
             'config.json'
         );
 
