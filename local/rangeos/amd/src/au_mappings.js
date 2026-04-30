@@ -78,6 +78,16 @@ export const init = () => {
             );
         }
 
+        const defaultBtn = e.target.closest('[data-action="create-default-mapping"]');
+        if (defaultBtn) {
+            e.preventDefault();
+            createDefaultMapping(
+                defaultBtn.dataset.auid || '',
+                defaultBtn.dataset.autitle || '',
+                defaultBtn.dataset.defaultscenarioname || ''
+            );
+        }
+
         const classBtn = e.target.closest('[data-action="create-class"]');
         if (classBtn) {
             e.preventDefault();
@@ -90,17 +100,74 @@ export const init = () => {
 };
 
 /**
+ * Look up a scenario by its exact name and open the mapping form pre-filled with its UUID.
+ * Shows an inline warning if the scenario is not found in the current environment.
+ *
+ * @param {string} auId AU IRI.
+ * @param {string} auTitle AU title/name for display.
+ * @param {string} defaultScenarioName Scenario name from the course RC5.yaml config.
+ */
+const createDefaultMapping = async(auId, auTitle, defaultScenarioName) => {
+    const btn = document.querySelector(
+        `[data-action="create-default-mapping"][data-auid="${CSS.escape(auId)}"]`
+    );
+    const originalHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Searching...';
+    }
+
+    try {
+        const result = await Ajax.call([{
+            methodname: 'local_rangeos_list_scenarios',
+            args: {
+                envid: envId,
+                search: defaultScenarioName,
+                page: 0,
+                pagesize: 100,
+            },
+        }])[0];
+
+        const scenario = (result.scenarios || []).find(s => s.name === defaultScenarioName);
+
+        if (scenario) {
+            showMappingForm(auId, auTitle, JSON.stringify([scenario.id]), false, defaultScenarioName);
+        } else {
+            Notification.addNotification({
+                message: `Default scenario "${defaultScenarioName}" was not found in this environment.`,
+                type: 'warning',
+            });
+        }
+    } catch (err) {
+        Notification.exception(err);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+};
+
+/**
  * Show the mapping create/edit modal form.
  *
  * @param {string} auId AU IRI.
  * @param {string} auTitle AU title/name for display.
  * @param {string} existingScenarios JSON string of current scenarios.
  * @param {boolean} isEdit Whether this is an edit operation.
+ * @param {string} defaultScenarioName Optional scenario name shown as a hint when pre-filled.
  */
-const showMappingForm = async(auId, auTitle, existingScenarios, isEdit) => {
+const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultScenarioName = '') => {
     const title = isEdit
         ? await getString('editmapping', 'local_rangeos')
         : await getString('createmapping', 'local_rangeos');
+
+    const defaultHint = defaultScenarioName
+        ? `<div class="alert alert-info py-2 mb-2">
+               <small>Default scenario from course config: <strong>${escapeHtml(defaultScenarioName)}</strong></small>
+           </div>`
+        : '';
 
     // Create a container div for the form.
     const container = document.createElement('div');
@@ -117,6 +184,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit) => {
         </div>
         <div class="form-group">
             <label for="mapping-scenarios">Scenarios (JSON array of UUIDs)</label>
+            ${defaultHint}
             <textarea class="form-control" id="mapping-scenarios"
                       rows="4">${escapeHtml(existingScenarios)}</textarea>
             <small class="form-text text-muted">

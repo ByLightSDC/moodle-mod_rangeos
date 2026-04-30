@@ -150,6 +150,11 @@ $string['loading'] = 'Loading...';
 // Add seats.
 $string['addseats'] = 'Add seats';
 
+// Default scenario mapping.
+$string['usedefault'] = 'Use default';
+$string['mapalldefaults'] = 'Map all defaults';
+$string['mapalldefaults_desc'] = 'Create mappings for every unmapped AU that has a default scenario set in its RC5 config.';
+
 // Errors.
 $string['error:confignotfound'] = 'config.json not found: {$a}';
 $string['error:configinvalid'] = 'config.json contains invalid JSON: {$a}';

@@ -47,6 +47,89 @@
     <div class="alert alert-danger">{{error}}</div>
     {{/haserror}}
 
+    {{#hasenvironments}}
+    <div class="mb-3">
+        <a href="{{mapallurl}}"
+           class="btn btn-success"
+           onclick="return confirm('This will create mappings for every unmapped AU that has a default scenario in its RC5 config. Continue?')">
+            {{#str}}mapalldefaults, local_rangeos{{/str}}
+        </a>
+        <small class="text-muted ml-2">{{#str}}mapalldefaults_desc, local_rangeos{{/str}}</small>
+    </div>
+    {{/hasenvironments}}
+
+    {{#hasmapresults}}
+    {{#mapresults}}
+    <div class="card mb-4">
+        <div class="card-header font-weight-bold">Map all defaults — results</div>
+        <div class="card-body p-0">
+            {{#hascreated}}
+            <div class="px-3 py-3{{#hasfailed}} border-bottom{{/hasfailed}}">
+                <h6 class="text-success mb-3">Created ({{createdcount}})</h6>
+                {{#created_by_course}}
+                <p class="mb-1 small font-weight-bold text-muted text-uppercase">
+                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
+                    {{^hascourse}}No local course{{/hascourse}}
+                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                </p>
+                <table class="table table-sm table-bordered mb-3">
+                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th></tr></thead>
+                    <tbody>
+                        {{#items}}
+                        <tr>
+                            <td>
+                                {{title}}
+                                <br><code class="small text-muted text-break">{{auid}}</code>
+                            </td>
+                            <td>{{scenarioname}}</td>
+                        </tr>
+                        {{/items}}
+                    </tbody>
+                </table>
+                {{/created_by_course}}
+            </div>
+            {{/hascreated}}
+            {{#hasfailed}}
+            <div class="px-3 py-3">
+                <h6 class="text-danger mb-3">Failed ({{failedcount}})</h6>
+                {{#failed_by_course}}
+                <p class="mb-1 small font-weight-bold text-muted text-uppercase">
+                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
+                    {{^hascourse}}No local course{{/hascourse}}
+                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                </p>
+                <table class="table table-sm table-bordered mb-3">
+                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th><th>Reason</th></tr></thead>
+                    <tbody>
+                        {{#items}}
+                        <tr>
+                            <td>
+                                {{title}}
+                                <br><code class="small text-muted text-break">{{auid}}</code>
+                            </td>
+                            <td>{{scenarioname}}</td>
+                            <td class="text-danger">{{reason}}</td>
+                        </tr>
+                        {{/items}}
+                    </tbody>
+                </table>
+                {{/failed_by_course}}
+            </div>
+            {{/hasfailed}}
+            {{^hascreated}}{{^hasfailed}}
+            <div class="px-3 py-3 text-muted">
+                No new mappings created.
+                {{#skipped}}({{skipped}} already mapped.){{/skipped}}
+            </div>
+            {{/hasfailed}}{{/hascreated}}
+        </div>
+        {{#skipped}}
+        <div class="card-footer text-muted small">{{skipped}} AU(s) skipped — already mapped.</div>
+        {{/skipped}}
+    </div>
+    {{/mapresults}}
+    {{/hasmapresults}}
+
     {{#showallmode}}
     <div class="d-flex align-items-center mb-3">
         {{#showall}}
@@ -194,13 +277,32 @@
                         {{/firstscenariouuid}}
                         {{/ismapped}}
                         {{^ismapped}}
-                        <button class="btn btn-sm btn-primary"
+                        <button class="btn btn-sm btn-outline-primary mr-1"
                                 data-action="create-mapping"
                                 data-auid="{{auid}}"
                                 data-autitle="{{title}}"
                                 data-scenarios="[]">
                             Map
                         </button>
+                        {{#scenarioname}}
+                        {{^defaultscenariomissing}}
+                        <button class="btn btn-sm btn-primary"
+                                data-action="create-default-mapping"
+                                data-auid="{{auid}}"
+                                data-autitle="{{title}}"
+                                data-defaultscenarioname="{{scenarioname}}"
+                                title="{{scenarioname}}">
+                            {{#str}}usedefault, local_rangeos{{/str}}
+                        </button>
+                        {{/defaultscenariomissing}}
+                        {{#defaultscenariomissing}}
+                        <span title="Not found in this environment: {{scenarioname}}">
+                            <button class="btn btn-sm btn-danger" disabled style="pointer-events:none;">
+                                {{#str}}usedefault, local_rangeos{{/str}}
+                            </button>
+                        </span>
+                        {{/defaultscenariomissing}}
+                        {{/scenarioname}}
                         {{/ismapped}}
                     {{/israngeos}}
                 </td>
