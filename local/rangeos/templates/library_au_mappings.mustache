@@ -8,11 +8,11 @@
 <div data-baseurl="{{baseurl}}" data-versionid="{{versionid}}">
     {{#hasenvironments}}
     <div class="form-group row mb-3">
-        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
+        <label for="rangeos-env-select"  class="col-form-label mr-2" style="width:180px">
             {{#str}}selectenvironment, local_rangeos{{/str}}
         </label>
-        <div class="col-sm-4">
-            <select id="rangeos-env-select" class="custom-select">
+        <div class="col-auto">
+            <select id="rangeos-env-select" class="custom-select" style="min-width:180px">
                 {{#environments}}
                 <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
                 {{/environments}}
@@ -29,11 +29,11 @@
 
     {{#haspackages}}
     <div class="form-group row mb-3">
-        <label for="rangeos-package-select" class="col-sm-2 col-form-label">
+        <label for="rangeos-package-select"  class="col-form-label mr-2" style="width:180px">
             {{#str}}selectpackage, local_rangeos{{/str}}
         </label>
-        <div class="col-sm-6">
-            <select id="rangeos-package-select" class="custom-select">
+        <div class="col-auto">
+            <select id="rangeos-package-select" class="custom-select" style="min-width:180px">
                 <option value="">All packages</option>
                 {{#packages}}
                 <option value="{{id}}" {{#selected}}selected{{/selected}}>{{title}}</option>

@@ -136,10 +136,10 @@ $string['rangeos:managecontent'] = 'Manage RangeOS content and classes';
 
 // Scenario classes management.
 $string['manageclasses'] = 'Manage Classes';
-$string['createclass'] = 'Create class';
+$string['createclass'] = 'Create Class';
 $string['deleteclass'] = 'Delete';
-$string['classid'] = 'Class ID';
-$string['classinstances'] = 'Instances';
+$string['classid'] = 'Class Id';
+$string['classinstances'] = 'Seats';
 $string['viewinstances'] = 'View';
 $string['noclasses'] = 'No scenario classes found.';
 $string['scenarioname'] = 'Scenario';
@@ -148,7 +148,7 @@ $string['instanceid'] = 'Instance ID';
 $string['loading'] = 'Loading...';
 
 // Add seats.
-$string['addseats'] = 'Add seats';
+$string['addseats'] = 'Add Seats';
 
 // Default scenario mapping.
 $string['usedefault'] = 'Use default';
