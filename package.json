@@ -1,0 +1,12 @@
+{
+  "name": "local_rangeos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch"
+  },
+  "devDependencies": {
+    "rollup": "^4.0.0"
+  }
+}
