@@ -166,7 +166,7 @@ const showClassInstances = (className, rangeId) => {
                             data-rangeid="${escapeHtml(rangeId || '')}"
                             data-scenarioid="${escapeHtml(inst.id)}"
                             data-classname="${escapeHtml(className)}"
-                            title="Delete this instance">
+                            title="Remove this seat.">
                         &times;
                     </button>
                 </td>
@@ -185,7 +185,7 @@ const showClassInstances = (className, rangeId) => {
  */
 const deleteScenarioInstance = (rangeId, scenarioId, className) => {
     // eslint-disable-next-line no-alert
-    if (!window.confirm('Delete this scenario instance? This cannot be undone.')) {
+    if (!window.confirm('Delete this seat? This cannot be undone.')) {
         return;
     }
 

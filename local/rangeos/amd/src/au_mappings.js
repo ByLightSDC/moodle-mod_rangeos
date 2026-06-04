@@ -173,7 +173,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
     const container = document.createElement('div');
     container.innerHTML = `
         <div class="form-group">
-            <label for="mapping-auid">AU IRI</label>
+            <label for="mapping-auid">AU Id (IRI)</label>
             <input type="text" class="form-control" id="mapping-auid"
                    value="${escapeAttr(auId)}" ${auId ? 'readonly' : ''}>
         </div>
@@ -201,9 +201,6 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">${escapeHtml(title)}</h5>
-                        <button type="button" class="close" data-dismiss="modal">
-                            <span>&times;</span>
-                        </button>
                     </div>
                     <div class="modal-body" id="${modalId}-body"></div>
                     <div class="modal-footer">
