@@ -100,8 +100,7 @@ const loadInstanceCount = (className, el) => {
         args: {envid: envId, classid: className},
     }])[0].then((result) => {
         const taken = result.instances.filter(inst => inst.assigned).length;
-        const available = result.total - taken;
-        el.textContent = taken + ' / ' + available + ' seats taken';
+        el.textContent = taken + '/' + result.total + ' Assigned';
         // Store the scenarioId from the first instance on the class row for add-seats.
         if (result.instances.length > 0 && result.instances[0].scenarioid) {
             const row = el.closest('tr[data-classname]');
