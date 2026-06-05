@@ -99,7 +99,8 @@ const loadInstanceCount = (className, el) => {
         methodname: 'local_rangeos_get_class_instances',
         args: {envid: envId, classid: className},
     }])[0].then((result) => {
-        el.textContent = result.total + ' instances';
+        const taken = result.instances.filter(inst => inst.assigned).length;
+        el.textContent = taken + '/' + result.total + ' Assigned';
         // Store the scenarioId from the first instance on the class row for add-seats.
         if (result.instances.length > 0 && result.instances[0].scenarioid) {
             const row = el.closest('tr[data-classname]');
@@ -375,8 +376,6 @@ const showAddSeatsModal = (className, knownScenarioId) => {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Add Seats: ${escapeHtml(className)}</h5>
-                        <button type="button" class="close" aria-label="Close"
-                                id="${modalId}-close"><span>&times;</span></button>
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
@@ -404,9 +403,6 @@ const showAddSeatsModal = (className, knownScenarioId) => {
 
     jq(modalEl).modal('show');
 
-    document.getElementById(modalId + '-close').addEventListener('click', () => {
-        jq(modalEl).modal('hide');
-    });
     document.getElementById(modalId + '-cancel').addEventListener('click', () => {
         jq(modalEl).modal('hide');
     });

@@ -232,7 +232,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
         const scenariosJson = modalEl.querySelector('#mapping-scenarios').value.trim();
 
         if (!mappingAuId) {
-            Notification.addNotification({message: 'AU IRI is required.', type: 'error'});
+            Notification.addNotification({message: 'AU Id (IRI) is required.', type: 'error'});
             return;
         }
 
@@ -299,9 +299,6 @@ const showCreateClassForm = async(scenarioUuid, auTitle) => {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">${escapeHtml(title)}</h5>
-                        <button type="button" class="close" data-dismiss="modal">
-                            <span>&times;</span>
-                        </button>
                     </div>
                     <div class="modal-body" id="${modalId}-body"></div>
                     <div class="modal-footer">

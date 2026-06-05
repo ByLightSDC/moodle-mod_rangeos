@@ -62,6 +62,47 @@ Navigate to **Site administration > Plugins > Local plugins > RangeOS Integratio
 | `local/rangeos:viewaumappings` | View AU mappings and class data | Manager, Editing teacher |
 | `local/rangeos:managecontent` | Patch AU configs, manage classes | Manager |
 
+## Development
+
+### JavaScript (AMD modules)
+
+The files in `local/rangeos/amd/src/` are written as ES modules and must be compiled to AMD format before Moodle can load them. The compiled output goes to `local/rangeos/amd/build/`.
+
+**Do not edit the `amd/build/` files directly** — they are generated. Always edit `amd/src/` and rebuild.
+
+#### Setup
+
+```bash
+nvm use        # switches to Node 22 (pinned in .nvmrc)
+npm install
+```
+
+#### Build
+
+```bash
+npm run build
+```
+
+#### Watch mode (rebuilds on save)
+
+```bash
+npm run watch
+```
+
+#### Deploying to Moodle
+
+Copy (or symlink) the `local/rangeos` directory into your Moodle installation's `local/` directory, then purge caches so Moodle picks up the new build:
+
+**Site administration > Development > Purge all caches**
+
+Or via CLI:
+
+```bash
+php admin/cli/purge_caches.php
+```
+
+> **Note:** The JS cannot be tested in isolation — it depends on Moodle runtime modules (`core/ajax`, `core/notification`, etc.). You need a running Moodle instance to verify behaviour.
+
 ## License
 
 This plugin is licensed under the [GNU GPL v3 or later](https://www.gnu.org/copyleft/gpl.html).
