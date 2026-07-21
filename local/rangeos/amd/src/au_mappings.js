@@ -6,6 +6,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import $ from 'jquery';
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
@@ -204,7 +205,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
                     </div>
                     <div class="modal-body" id="${modalId}-body"></div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="${modalId}-cancel">Cancel</button>
                         <button type="button" class="btn btn-primary" id="${modalId}-save">Save</button>
                     </div>
                 </div>
@@ -222,8 +223,12 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
     modalBody.appendChild(container);
 
     // Show modal using jQuery (Moodle ships Bootstrap 4 with jQuery).
-    // eslint-disable-next-line no-undef
     $(modalEl).modal('show');
+
+    // Cancel handler (data-dismiss alone isn't reliably wired up on every Moodle page).
+    document.getElementById(modalId + '-cancel').addEventListener('click', () => {
+        $(modalEl).modal('hide');
+    });
 
     // Save handler.
     document.getElementById(modalId + '-save').addEventListener('click', () => {
@@ -249,14 +254,12 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
                 scenarios_json: scenariosJson || '[]',
             },
         }])[0].then(() => {
-            // eslint-disable-next-line no-undef
             $(modalEl).modal('hide');
             window.location.reload();
         }).catch(Notification.exception);
     });
 
     // Cleanup on close.
-    // eslint-disable-next-line no-undef
     $(modalEl).on('hidden.bs.modal', () => {
         wrapper.remove();
     });
@@ -302,7 +305,7 @@ const showCreateClassForm = async(scenarioUuid, auTitle) => {
                     </div>
                     <div class="modal-body" id="${modalId}-body"></div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="${modalId}-cancel">Cancel</button>
                         <button type="button" class="btn btn-success" id="${modalId}-create">Create</button>
                     </div>
                 </div>
@@ -318,8 +321,12 @@ const showCreateClassForm = async(scenarioUuid, auTitle) => {
     const modalBody = document.getElementById(modalId + '-body');
     modalBody.appendChild(container);
 
-    // eslint-disable-next-line no-undef
     $(modalEl).modal('show');
+
+    // Cancel handler (data-dismiss alone isn't reliably wired up on every Moodle page).
+    document.getElementById(modalId + '-cancel').addEventListener('click', () => {
+        $(modalEl).modal('hide');
+    });
 
     document.getElementById(modalId + '-create').addEventListener('click', () => {
         const classId = modalEl.querySelector('#class-id-input').value.trim();
@@ -347,7 +354,6 @@ const showCreateClassForm = async(scenarioUuid, auTitle) => {
                 count: count,
             },
         }])[0].then(() => {
-            // eslint-disable-next-line no-undef
             $(modalEl).modal('hide');
             Notification.addNotification({
                 message: `Class "${classId}" created with ${count} seats.`,
@@ -360,7 +366,6 @@ const showCreateClassForm = async(scenarioUuid, auTitle) => {
         });
     });
 
-    // eslint-disable-next-line no-undef
     $(modalEl).on('hidden.bs.modal', () => {
         wrapper.remove();
     });
