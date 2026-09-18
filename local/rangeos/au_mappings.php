@@ -135,7 +135,7 @@ if (!empty($allauids)) {
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('aumappings_global', 'local_rangeos'));
+echo \local_rangeos\output\dashboard::start('au_mappings', 'manageaumappings_desc');
 
 // Build template data.
 $envoptions = [];
@@ -203,4 +203,5 @@ echo $OUTPUT->render_from_template('local_rangeos/au_mappings', [
     'baseurl' => (new moodle_url('/local/rangeos/au_mappings.php'))->out(false),
 ]);
 
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

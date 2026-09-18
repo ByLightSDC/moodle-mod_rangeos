@@ -166,3 +166,9 @@ $string['noactivities'] = 'No cmi5 activities found.';
 // Errors.
 $string['error:confignotfound'] = 'config.json not found: {$a}';
 $string['error:configinvalid'] = 'config.json contains invalid JSON: {$a}';
+
+// Shared management presentation.
+$string['dashboardoverview'] = 'Overview';
+$string['dashboardnavigation'] = 'RangeOS management navigation';
+$string['dashboarddescription'] = 'Manage your range environments, scenario classes, and learning activity mappings.';
+$string['dashboardexplore'] = 'Open management page';

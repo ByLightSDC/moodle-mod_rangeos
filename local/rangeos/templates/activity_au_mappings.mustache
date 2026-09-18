@@ -12,26 +12,14 @@
         </a>
     </div>
 
-    {{#hasenvironments}}
-    <div class="form-group row mb-3">
-        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
-            {{#str}}selectenvironment, local_rangeos{{/str}}
-        </label>
-        <div class="col-sm-4">
-            <select id="rangeos-env-select" class="custom-select">
-                {{#environments}}
-                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
-                {{/environments}}
-            </select>
-        </div>
-    </div>
-    {{/hasenvironments}}
+    {{> local_rangeos/environment_selector }}
 
     {{#haserror}}
     <div class="alert alert-danger">{{error}}</div>
     {{/haserror}}
 
     {{#hasaus}}
+    <div class="table-responsive rangeos-table-panel">
     <table class="table table-striped">
         <thead>
             <tr>
@@ -82,11 +70,12 @@
             {{/aus}}
         </tbody>
     </table>
+    </div>
     {{/hasaus}}
 
     {{^hasaus}}
     {{^haserror}}
-    <div class="alert alert-info">
+    <div class="alert alert-info rangeos-empty-state">
         {{#str}}noaus, local_rangeos{{/str}}
     </div>
     {{/haserror}}

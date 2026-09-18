@@ -43,63 +43,9 @@ $PAGE->set_title(get_string('manage_dashboard', 'local_rangeos'));
 $PAGE->set_heading(get_string('manage_dashboard', 'local_rangeos'));
 
 echo $OUTPUT->header();
-
-// Build the list of management areas the user can access.
-$items = [];
-
-if ($canmanagecontent) {
-    $items[] = [
-        'url' => new moodle_url('/local/rangeos/scenario_classes.php'),
-        'icon' => 'i/settings',
-        'title' => get_string('manageclasses', 'local_rangeos'),
-        'desc' => get_string('manageclasses_desc', 'local_rangeos'),
-    ];
-}
-
-if ($canmanageenv) {
-    $items[] = [
-        'url' => new moodle_url('/local/rangeos/environment_profiles.php'),
-        'icon' => 'i/settings',
-        'title' => get_string('manageenvironments', 'local_rangeos'),
-        'desc' => get_string('manageenvironments_desc', 'local_rangeos'),
-    ];
-}
-
-if ($canmanageaus) {
-    $items[] = [
-        'url' => new moodle_url('/local/rangeos/library_au_mappings.php'),
-        'icon' => 'i/settings',
-        'title' => get_string('library_aumappings', 'local_rangeos'),
-        'desc' => get_string('library_aumappings_desc', 'local_rangeos'),
-    ];
-}
-
-if ($canmanageenv) {
-    $items[] = [
-        'url' => new moodle_url('/local/rangeos/activity_environments.php'),
-        'icon' => 'i/settings',
-        'title' => get_string('activityenvironments', 'local_rangeos'),
-        'desc' => get_string('activityenvironments_desc', 'local_rangeos'),
-    ];
-}
-
-// Render as a card grid.
-echo html_writer::start_div('container-fluid mt-3');
-echo html_writer::start_div('row');
-foreach ($items as $item) {
-    echo html_writer::start_div('col-sm-6 col-lg-4 col-xl-3 mb-3');
-    echo html_writer::start_tag('a', [
-        'href' => $item['url']->out(false),
-        'class' => 'card h-100 text-decoration-none',
-    ]);
-    echo html_writer::start_div('card-body d-flex flex-column');
-    echo html_writer::tag('h5', $item['title'], ['class' => 'card-title']);
-    echo html_writer::tag('p', $item['desc'], ['class' => 'card-text text-muted small']);
-    echo html_writer::end_div();
-    echo html_writer::end_tag('a');
-    echo html_writer::end_div();
-}
-echo html_writer::end_div();
-echo html_writer::end_div();
-
+echo \local_rangeos\output\dashboard::start('manage', 'dashboarddescription');
+echo $OUTPUT->render_from_template('local_rangeos/dashboard_overview', [
+    'cards' => \local_rangeos\output\dashboard::areas(),
+]);
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

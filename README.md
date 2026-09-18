@@ -67,3 +67,24 @@ Navigate to **Site administration > Plugins > Local plugins > RangeOS Integratio
 This plugin is licensed under the [GNU GPL v3 or later](https://www.gnu.org/copyleft/gpl.html).
 
 Copyright 2026 Bylight
+
+## Management UI
+
+The management pages use the same visual patterns as the RapidCMI5 dashboard.
+Presentation is shared within this plugin:
+
+- `classes/output/dashboard.php` defines capability-filtered cards and navigation,
+  and provides `start()` / `end()` for the page wrapper.
+- `templates/dashboard_header.mustache` and `dashboard_overview.mustache` render
+  the shared navigation and overview cards.
+- `templates/environment_selector.mustache` provides the common environment filter.
+- `styles.css` contains the reusable cards, filters, table panels, and form styles.
+  All selectors are scoped to `.rangeos-dashboard`; theme colors come from CSS variables.
+
+When adding a management page, use the shared wrapper after the Moodle header and
+close it before the footer. Keep existing JavaScript IDs and `data-*` attributes
+on controls. Add management destinations to `dashboard::areas()` so cards and
+navigation use the same capability checks.
+
+The presentation has no dependency on RapidCMI5 being installed. After deploying
+stylesheet or template changes, purge Moodle caches to refresh the theme output.
