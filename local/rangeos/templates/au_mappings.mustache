@@ -6,23 +6,10 @@
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
 <div data-baseurl="{{baseurl}}">
-    {{#hasenvironments}}
-    <div class="form-group row mb-3">
-        <label for="rangeos-env-select" class="col-sm-2 col-form-label">
-            {{#str}}selectenvironment, local_rangeos{{/str}}
-        </label>
-        <div class="col-sm-4">
-            <select id="rangeos-env-select" class="custom-select">
-                {{#environments}}
-                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
-                {{/environments}}
-            </select>
-        </div>
-    </div>
-    {{/hasenvironments}}
+    {{> local_rangeos/environment_selector }}
 
     {{^hasenvironments}}
-    <div class="alert alert-info">
+    <div class="alert alert-info rangeos-empty-state">
         {{#str}}noenvironments, local_rangeos{{/str}}
     </div>
     {{/hasenvironments}}
@@ -39,7 +26,8 @@
     </div>
 
     {{#hasmappings}}
-    <div class="table-responsive">
+    <p class="text-muted small">{{rowsummary}}</p>
+    <div class="table-responsive rangeos-table-panel">
     <table class="table table-striped table-sm">
         <thead>
             <tr>
@@ -96,10 +84,13 @@
 
     {{^hasmappings}}
     {{^haserror}}
-    <div class="alert alert-info">
+    <div class="alert alert-info rangeos-empty-state">
         {{#str}}nomappings, local_rangeos{{/str}}
     </div>
     {{/haserror}}
     {{/hasmappings}}
+    {{#pagination}}
+    {{> local_rangeos/mapping_pagination }}
+    {{/pagination}}
     {{/hasenvironments}}
 </div>

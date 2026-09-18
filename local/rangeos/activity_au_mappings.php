@@ -74,6 +74,7 @@ if ($envid > 0) {
 }
 
 echo $OUTPUT->header();
+echo \local_rangeos\output\dashboard::start('activity_au_mappings', 'manageaumappings_desc');
 echo $OUTPUT->heading(get_string('aumappings_activity', 'local_rangeos') . ': ' . format_string($cmi5->name));
 
 // Build template data.
@@ -123,4 +124,5 @@ echo $OUTPUT->render_from_template('local_rangeos/activity_au_mappings', [
     'baseurl' => (new moodle_url('/local/rangeos/activity_au_mappings.php', ['cmid' => $cmid]))->out(false),
 ]);
 
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

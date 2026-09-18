@@ -166,3 +166,18 @@ $string['noactivities'] = 'No cmi5 activities found.';
 // Errors.
 $string['error:confignotfound'] = 'config.json not found: {$a}';
 $string['error:configinvalid'] = 'config.json contains invalid JSON: {$a}';
+
+// Shared management presentation.
+$string['dashboardoverview'] = 'Overview';
+$string['dashboardnavigation'] = 'RangeOS management navigation';
+$string['dashboarddescription'] = 'Manage your range environments, scenario classes, and learning activity mappings.';
+$string['dashboardexplore'] = 'Open management page';
+
+// Library mapping scope.
+$string['alllibrarypackages'] = 'All Projects';
+$string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages. For all mappings in this environment, visit';
+$string['nolibraryaus'] = 'No AUs found in the selected library packages.';
+$string['librarymapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} library AUs.';
+
+$string['globalmapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} AU mappings.';
+$string['apply'] = 'Apply';

@@ -1,0 +1,14 @@
+{{!
+    @template local_rangeos/dashboard_overview
+    Management cards using the same area definitions as the page navigation.
+}}
+<div class="rangeos-card-grid">
+    {{#cards}}
+    <a class="rangeos-feature-card" href="{{url}}">
+        <span class="rangeos-card-icon" aria-hidden="true">{{{icon}}}</span>
+        <h2 class="h5">{{title}}</h2>
+        <p class="rangeos-card-description">{{description}}</p>
+        <span class="rangeos-card-link">{{#str}}dashboardexplore, local_rangeos{{/str}} <span aria-hidden="true">&rarr;</span></span>
+    </a>
+    {{/cards}}
+</div>

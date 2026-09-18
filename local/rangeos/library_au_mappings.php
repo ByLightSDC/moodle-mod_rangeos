@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * AU-to-scenario mapping management — shows all RangeOS AU mappings with optional package filter.
+ * AU-to-scenario mapping management — shows local library AUs with an optional package filter.
  *
  * @package    local_rangeos
  * @copyright  2026 Bylight
@@ -34,11 +34,8 @@ require_capability('local/rangeos:manageaumappings', $context);
 // Package ID is the selected package.
 $packageid = optional_param('packageid', 0, PARAM_INT);
 $envid = optional_param('envid', 0, PARAM_INT);
-$showall = optional_param('showall', 0, PARAM_INT);
-// Adding pagination CCUI 2910
 $currentpage = optional_param('page', 0, PARAM_INT);
 $pagesize = optional_param('perpage', 20, PARAM_INT);
-$totalpages = 1; // default, gets overwritten in all-mappings mode
 
 // Handle bulk map-all-defaults action.
 $mapresults = null;
@@ -91,96 +88,46 @@ $_t = microtime(true);
 $packages = $DB->get_records('cmi5_packages', [], 'title ASC', 'id, title, latestversion');
 $_perf('DB: load packages list', $_t, count($packages) . ' packages');
 
-// Determine which AUs to show: filtered by package, or all from the API.
-$aus = []; // auid => {auid, title, url, versionid}
-$packagetitle = '';
-$versionid = 0;
-
-if ($packageid > 0) {
-    // Package-filtered mode: show AUs from this specific package.
-    $_t = microtime(true);
-    $package = $DB->get_record('cmi5_packages', ['id' => $packageid]);
-    $_perf('DB: load package record', $_t);
-    if ($package) {
-        $packagetitle = $package->title;
-        $versionid = $package->latestversion;
-        if ($versionid) {
-            $_t = microtime(true);
-            $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
-            $_perf('DB: load package AUs', $_t, count($packageaus) . ' AUs');
-            foreach ($packageaus as $pau) {
-                $aus[$pau->auid] = $pau;
-            }
-        }
-    }
-}
+// The local library owns both the row count and pagination. Remote mappings only enrich these rows.
+$librarypage = \local_rangeos\library_au_listing::get_page($packageid, $currentpage, $pagesize);
+$aus = $librarypage['aus'];
+$totalitems = $librarypage['total'];
+$currentpage = $librarypage['page'];
+$pagesize = $librarypage['pagesize'];
+$package = $packageid > 0 ? $DB->get_record('cmi5_packages', ['id' => $packageid], '*', MUST_EXIST) : null;
+$packagetitle = $package ? format_string($package->title) : '';
+$versionid = $package ? (int) $package->latestversion : 0;
 
 // Fetch AU mappings from devops-api.
 $aumappings = []; // auid => mapping data.
 $scenariolookup = []; // uuid => name.
+$scenariobynamelookup = []; // name => uuid.
 $scenariouuids = [];
 $client = null;
-$totalitems = null;
 $error = '';
-if ($envid > 0) {
+if ($envid > 0 && $aus) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
-        if ($packageid > 0 && !empty($aus)) {
-            // Package mode: fetch all mappings in one call and filter to this package's AUs.
-            $scenariouuids = [];
-            $_t = microtime(true);
-            $bulkresponse = $client->list_au_mappings(['limit' => 1000]);
-            $bulkitems = $bulkresponse['data'] ?? $bulkresponse['items'] ?? $bulkresponse;
-            foreach ($bulkitems as $m) {
-                $m = (array) $m;
-                $auid = $m['auId'] ?? $m['auid'] ?? '';
-                if (!$auid || !isset($aus[$auid])) {
-                    continue;
-                }
-                $aumappings[$auid] = $m;
-                foreach ($m['scenarios'] ?? [] as $s) {
-                    $uuid = is_array($s) ? ($s['uuid'] ?? $s['id'] ?? '') : (string) $s;
-                    if ($uuid) {
-                        $scenariouuids[$uuid] = true;
-                    }
+        // Look up only this page's AUs. Do not truncate mappings at a remote list-page boundary.
+        foreach ($aus as $au) {
+            if (array_key_exists($au->auid, $aumappings)) {
+                continue;
+            }
+            $mapping = $client->get_au_mapping($au->auid);
+            $aumappings[$au->auid] = $mapping;
+            foreach ($mapping['scenarios'] ?? [] as $scenario) {
+                $uuid = is_array($scenario)
+                    ? ($scenario['uuid'] ?? $scenario['scenarioId'] ?? $scenario['id'] ?? '')
+                    : (string) $scenario;
+                if ($uuid) {
+                    $scenariouuids[$uuid] = true;
                 }
             }
-            $_perf('API: list_au_mappings (package mode)', $_t, count($bulkitems) . ' total, ' . count($aumappings) . ' matched');
-        } else {
-            // All-mappings mode: fetch all AU mappings from the API.
-            $scenariouuids = [];
-            $page = 0;
-            $_t = microtime(true);
-            $response = $client->list_au_mappings([
-                'page' => $currentpage,
-                'pageSize' => $pagesize,
-            ]);
-            $items = $response['data'] ?? $response['items'] ?? $response;
-            $_perf('API: list_au_mappings (all-mappings mode)', $_t, count($items) . ' items, page ' . $currentpage);
-            foreach ($items as $m) {
-                $m = (array) $m;
-                $auid = $m['auId'] ?? $m['auid'] ?? '';
-                if (!$auid) {
-                    continue;
-                }
-                $aumappings[$auid] = $m;
-                if (!isset($aus[$auid])) {
-                    $aus[$auid] = (object) [
-                        'auid' => $auid,
-                        'title' => $m['name'] ?? '',
-                        'url' => '',
-                        'versionid' => 0,
-                    ];
-                }
-            }
-            $page++;
-            $totalpages = $response['totalPages'] ?? 1;
-            $totalitems = $response['totalCount'] ?? $response['total'] ?? null;
         }
 
         // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
-        $scenariobynamelookup = []; // name => uuid (package mode only)
-        if (!empty($scenariouuids) || $packageid > 0) {
+        $scenariobynamelookup = []; // name => uuid
+        if (!empty($aus)) {
             $_t = microtime(true);
             $scenarioresponse = $client->list_content_scenarios(['limit' => 1000]);
             foreach ($scenarioresponse['data'] ?? [] as $s) {
@@ -190,7 +137,7 @@ if ($envid > 0) {
                 if ($uuid && isset($scenariouuids[$uuid])) {
                     $scenariolookup[$uuid] = $name;
                 }
-                if ($packageid > 0 && $name && $uuid) {
+                if ($name && $uuid) {
                     $scenariobynamelookup[$name] = $uuid;
                 }
             }
@@ -201,27 +148,8 @@ if ($envid > 0) {
     }
 }
 
-if ($packageid === 0 && !empty($aus)) {
-    $auids = array_keys($aus);
-    list($insql, $inparams) = $DB->get_in_or_equal($auids, SQL_PARAMS_NAMED);
-    $localaus = $DB->get_records_sql(
-        "SELECT DISTINCT ca.auid, ca.title FROM {cmi5_aus} ca WHERE ca.auid {$insql}",
-        $inparams
-    );
-    foreach ($localaus as $la) {
-        if (isset($aus[$la->auid]) && empty($aus[$la->auid]->title)) {
-            $aus[$la->auid]->title = $la->title;
-        }
-    }
-}
-
 echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rangeos/manage.php'),
-    get_string('backtomanagement', 'local_rangeos'),
-    ['class' => 'btn btn-secondary mb-3']
-);
-echo $OUTPUT->heading(get_string('library_aumappings', 'local_rangeos'));
+echo \local_rangeos\output\dashboard::start('library_au_mappings', 'library_aumappings_desc');
 
 // Build template data.
 $envoptions = [];
@@ -244,7 +172,7 @@ foreach ($packages as $pkg) {
 
 // Build AU IRI → cmi5 activity lookup from local DB.
 $aulookup = []; // auid => [{activityname, coursename, cmid}]
-$allauids = array_keys($aus);
+$allauids = array_values(array_unique(array_column($aus, 'auid')));
 if (!empty($allauids)) {
     list($insql, $inparams) = $DB->get_in_or_equal($allauids, SQL_PARAMS_NAMED);
     $sql = "SELECT ca.id, ca.auid, ca.title AS autitle, c5.id AS cmi5id, c5.name AS activityname,
@@ -270,46 +198,12 @@ if (!empty($allauids)) {
     }
 }
 
-// Also build a package lookup for all-mappings mode — which package does each AU belong to?
-$aupackagelookup = []; // auid => {packageid, title}
-if ($packageid === 0 && !empty($allauids)) {
-    $sql = "SELECT pa.auid, p.id AS packageid, p.title AS packagetitle
-              FROM {cmi5_package_aus} pa
-              JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
-             WHERE pa.auid {$insql}";
-    $pkgrecords = $DB->get_records_sql($sql, $inparams);
-    foreach ($pkgrecords as $pr) {
-        $aupackagelookup[$pr->auid] = (object) [
-            'packageid' => $pr->packageid,
-            'packagetitle' => $pr->packagetitle,
-        ];
-    }
-}
-
-// Pre-fetch all config.json files for the selected package in one query instead of one per AU.
-$allauconfigs = [];
-if ($packageid > 0 && $versionid > 0) {
-    $allauconfigs = content_patcher::get_all_au_configs($versionid);
-}
-
+// Cache config files per version, including when browsing all library packages.
+$configsbyversion = [];
 $audata = [];
-$totalaumappings = count($aus);
-foreach ($aus as $auid => $au) {
-    // In all-mappings mode, default to showing only AUs with local activities.
-    if ($packageid === 0 && !$showall && !isset($aulookup[$au->auid])) {
-        continue;
-    }
-
+foreach ($aus as $au) {
     $mapping = $aumappings[$au->auid] ?? null;
     $scenarios = $mapping['scenarios'] ?? [];
-
-    // after the filter check, before building the rest of audata
-    foreach ($scenarios as $s) {
-        $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
-        if ($uuid) {
-            $scenariouuids[$uuid] = true;
-        }
-    }
 
     $scenariobadges = [];
     foreach ($scenarios as $s) {
@@ -323,11 +217,12 @@ foreach ($aus as $auid => $au) {
     $classmode = false;
     $defaultclassid = '';
     $scenarioname = '';
-    $auversionid = ($packageid > 0) ? $versionid : ($au->versionid ?? 0);
+    $auversionid = (int) $au->versionid;
     if (!empty($auversionid) && !empty($au->url)) {
-        $config = !empty($allauconfigs)
-            ? ($allauconfigs[content_patcher::au_url_to_filepath($au->url)] ?? null)
-            : content_patcher::get_au_config($auversionid, $au->url);
+        if (!array_key_exists($auversionid, $configsbyversion)) {
+            $configsbyversion[$auversionid] = content_patcher::get_all_au_configs($auversionid);
+        }
+        $config = $configsbyversion[$auversionid][content_patcher::au_url_to_filepath($au->url)] ?? null;
         if ($config !== null && !empty($config['rangeosScenarioUUID'])) {
             $israngeos = true;
             $scenarioname = $config['rangeosScenarioName'] ?? '';
@@ -336,8 +231,8 @@ foreach ($aus as $auid => $au) {
         }
     }
 
-    // In all-mappings mode without config.json access, treat all API mappings as RangeOS AUs.
-    if ($packageid === 0 && !$israngeos && !empty($scenarios)) {
+    // A library AU with an existing scenario mapping is also a RangeOS AU.
+    if (!$israngeos && !empty($scenarios)) {
         $israngeos = true;
     }
 
@@ -361,9 +256,6 @@ foreach ($aus as $auid => $au) {
             ];
         }
     }
-
-    // Package info for all-mappings mode.
-    $pkginfo = $aupackagelookup[$au->auid] ?? null;
 
     // Truncate long AU IRIs for display.
     $auidshort = $au->auid;
@@ -391,67 +283,22 @@ foreach ($aus as $auid => $au) {
         'firstscenariouuid' => $firstscenariouuid,
         'activities' => $activities,
         'hasactivities' => !empty($activities),
-        'packagetitle' => $pkginfo ? format_string($pkginfo->packagetitle) : '',
-        'haspackageinfo' => !empty($pkginfo),
+        'packagetitle' => format_string($au->packagetitle),
+        'haspackageinfo' => true,
     ];
 }
 
-// In all-mappings mode, scenario UUIDs are only known after the AU loop above, so we fetch
-// scenarios here. In package mode the first fetch (above) already resolved everything — skip.
-if ($packageid === 0 && $client && !empty($scenariouuids)) {
-    $scenarioresponse = $client->list_content_scenarios(['page' => 0, 'pageSize' => 500]);
-    $scenarioitems = $scenarioresponse['data'] ?? [];
-    foreach ($scenarioitems as $s) {
-        $s = (array) $s;
-        $uuid = $s['uuid'] ?? '';
-        if ($uuid) {
-            $scenariolookup[$uuid] = $s['name'] ?? '';
-        }
-    }
-    foreach ($audata as &$entry) {
-        $scenarios = json_decode($entry['scenarios_json'], true) ?? [];
-        $badges = [];
-        foreach ($scenarios as $s) {
-            $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
-            $name = $scenariolookup[$uuid] ?? '';
-            $badges[] = $name ?: $uuid;
-        }
-        $entry['scenario_badges'] = $badges;
-    }
-    unset($entry);
-}
-
-$baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php'))->out(false);
-
-$hiddencount = $totalaumappings - count($audata);
-
-// Paginate $audata. The API may return more items than pageSize if it ignores the parameter,
-// so we always PHP-slice as a safety net.
-$totalaudata = count($audata);
-if ($packageid === 0 && $totalpages <= 1 && $totalaudata > $pagesize) {
-    // API didn't paginate — derive totalpages from actual item count.
-    $totalpages = (int) ceil($totalaudata / $pagesize);
-}
-if ($totalitems === null) {
-    $totalitems = $totalpages * $pagesize;
-}
-$audata = array_slice($audata, $currentpage * $pagesize, $pagesize);
-$pagecount = count($audata);
-$pagefirst = $currentpage * $pagesize + 1;
-$pagelast = $pagefirst + $pagecount - 1;
-
+// Preserve the library filters when the shared AMD handler changes the environment.
+$baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php', [
+    'packageid' => $packageid,
+    'perpage' => $pagesize,
+]))->out(false);
 
 $pagingurl = new moodle_url('/local/rangeos/library_au_mappings.php', [
     'envid'     => $envid,
     'packageid' => $packageid,
-    'showall'   => $showall,
     'perpage'   => $pagesize,
 ]);
-
-$pagesizeoptions = [];
-foreach ([20, 50, 100] as $size) {
-    $pagesizeoptions[] = ['size' => $size, 'selected' => ($size === $pagesize)];
-}
 
 echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'environments' => $envoptions,
@@ -464,11 +311,13 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'versionid' => $versionid,
     'aus' => $audata,
     'hasaus' => !empty($audata),
+    'rowsummary' => get_string('librarymapping_count', 'local_rangeos', (object) [
+        'first' => $totalitems ? $currentpage * $pagesize + 1 : 0,
+        'last' => min(($currentpage + 1) * $pagesize, $totalitems),
+        'total' => $totalitems,
+    ]),
     'hasselectedpackage' => ($packageid > 0),
-    'showallmode' => ($packageid === 0),
-    'showall' => (bool) $showall,
-    'hiddencount' => $hiddencount,
-    'hashidden' => ($hiddencount > 0),
+    'showpackagecolumn' => ($packageid === 0),
     'error' => $error,
     'haserror' => !empty($error),
     'baseurl' => $baseurl,
@@ -481,7 +330,7 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
         'action' => 'mapalldefaults',
         'sesskey' => sesskey(),
     ]))->out(false),
-    'perpage' => $pagesize,
+    'globalmappingsurl' => (new moodle_url('/local/rangeos/au_mappings.php', ['envid' => $envid]))->out(false),
 ]);
 
 $perpageselect = html_writer::tag(
@@ -497,13 +346,13 @@ $perpageselect .= html_writer::select(
     ['id' => 'rangeos-perpage-select', 'class' => 'custom-select custom-select-sm w-auto', 'style' => 'vertical-align: middle;']
 );
 
-// Only show pages if there is more than one page.
-if ($pagecount >= $pagesize || $currentpage > 0) {
-    echo html_writer::tag('style', '.pagination { margin-bottom: 0; }');
+// Keep the page-size control available even when the larger size fits on one page.
+if ($totalitems > 0) {
     echo html_writer::div(
         html_writer::div($perpageselect, 'd-flex align-items-center mr-3') .
             html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
-        'd-flex align-items-center justify-content-center mt-3'
+        'rangeos-pagination d-flex flex-wrap align-items-center justify-content-center mt-3'
     );
 }
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

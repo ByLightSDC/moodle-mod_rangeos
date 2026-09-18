@@ -76,12 +76,7 @@ if ($envid > 0) {
 }
 
 echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rangeos/manage.php'),
-    get_string('backtomanagement', 'local_rangeos'),
-    ['class' => 'btn btn-secondary mb-3']
-);
-echo $OUTPUT->heading(get_string('manageclasses', 'local_rangeos'));
+echo \local_rangeos\output\dashboard::start('scenario_classes', 'manageclasses_desc');
 
 // Build template data.
 $envoptions = [];
@@ -114,4 +109,5 @@ echo $OUTPUT->render_from_template('local_rangeos/scenario_classes', [
     'baseurl' => $baseurl,
 ]);
 
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();
