@@ -178,3 +178,6 @@ $string['alllibrarypackages'] = 'All library packages';
 $string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages. For all mappings in this environment, visit';
 $string['nolibraryaus'] = 'No AUs found in the selected library packages.';
 $string['librarymapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} library AUs.';
+
+$string['globalmapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} AU mappings.';
+$string['apply'] = 'Apply';

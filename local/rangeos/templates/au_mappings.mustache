@@ -26,6 +26,7 @@
     </div>
 
     {{#hasmappings}}
+    <p class="text-muted small">{{rowsummary}}</p>
     <div class="table-responsive rangeos-table-panel">
     <table class="table table-striped table-sm">
         <thead>
@@ -88,5 +89,8 @@
     </div>
     {{/haserror}}
     {{/hasmappings}}
+    {{#pagination}}
+    {{> local_rangeos/mapping_pagination }}
+    {{/pagination}}
     {{/hasenvironments}}
 </div>

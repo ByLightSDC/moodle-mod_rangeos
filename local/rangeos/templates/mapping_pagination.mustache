@@ -1,0 +1,26 @@
+{{!
+    @template local_rangeos/mapping_pagination
+    Page-size form and Moodle paging bar. Filtering starts again at page zero.
+}}
+<div class="rangeos-pagination d-flex flex-wrap align-items-center justify-content-center mt-3">
+    <form action="{{actionurl}}" method="get" class="d-flex align-items-center" data-region="mapping-page-size">
+        <input type="hidden" name="envid" value="{{envid}}">
+        <input type="hidden" name="page" value="0">
+        <label for="rangeos-mapping-pagesize" class="mr-2 mb-0 small text-muted">{{#str}}perpage, moodle{{/str}}</label>
+        <select id="rangeos-mapping-pagesize" name="pagesize" class="custom-select custom-select-sm w-auto">
+            {{#pagesizeoptions}}
+            <option value="{{size}}"{{#selected}} selected{{/selected}}>{{size}}</option>
+            {{/pagesizeoptions}}
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-secondary ml-2">{{#str}}apply, local_rangeos{{/str}}</button>
+    </form>
+    {{{pagingbar}}}
+</div>
+{{#js}}
+require(['core/first'], function() {
+    var form = document.querySelector('[data-region="mapping-page-size"]');
+    form.querySelector('select').addEventListener('change', function() {
+        form.requestSubmit();
+    });
+});
+{{/js}}
