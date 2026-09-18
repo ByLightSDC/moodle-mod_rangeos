@@ -220,3 +220,10 @@
         transition: none;
     }
 }
+
+.rangeos-dashboard .rangeos-pagination {
+    gap: .75rem;
+}
+.rangeos-dashboard .rangeos-pagination .pagination {
+    margin-bottom: 0;
+}

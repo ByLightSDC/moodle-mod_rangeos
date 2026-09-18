@@ -172,3 +172,9 @@ $string['dashboardoverview'] = 'Overview';
 $string['dashboardnavigation'] = 'RangeOS management navigation';
 $string['dashboarddescription'] = 'Manage your range environments, scenario classes, and learning activity mappings.';
 $string['dashboardexplore'] = 'Open management page';
+
+// Library mapping scope.
+$string['alllibrarypackages'] = 'All library packages';
+$string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages. For all mappings in this environment, visit';
+$string['nolibraryaus'] = 'No AUs found in the selected library packages.';
+$string['librarymapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} library AUs.';

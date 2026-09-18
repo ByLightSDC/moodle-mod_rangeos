@@ -21,7 +21,7 @@
         </label>
         <div class="col-sm-6">
             <select id="rangeos-package-select" class="custom-select">
-                <option value="">All packages</option>
+                <option value="0">{{#str}}alllibrarypackages, local_rangeos{{/str}}</option>
                 {{#packages}}
                 <option value="{{id}}" {{#selected}}selected{{/selected}}>{{title}}</option>
                 {{/packages}}
@@ -121,38 +121,25 @@
     {{/mapresults}}
     {{/hasmapresults}}
 
-    {{#showallmode}}
-    <div class="d-flex align-items-center mb-3">
-        {{#showall}}
-        <span class="text-muted mr-2">Showing all {{totalaumappings}} RangeOS AU mappings.</span>
-        <a href="#" id="rangeos-toggle-filter" class="btn btn-sm btn-outline-secondary" data-showall="0">
-            Show only mapped to local activities
-        </a>
-        {{/showall}}
-        {{^showall}}
-            {{#hashidden}}
-            <span class="text-muted mr-2">Showing mappings with local activities. {{hiddencount}} additional mapping(s) hidden.</span>
-            <a href="#" id="rangeos-toggle-filter" class="btn btn-sm btn-outline-secondary" data-showall="1">
-                Show all
-            </a>
-            {{/hashidden}}
-        {{/showall}}
-    </div>
-    {{/showallmode}}
+    <p class="text-muted">
+        {{#str}}librarymapping_scope, local_rangeos{{/str}}
+        <a href="{{globalmappingsurl}}">{{#str}}aumappings_global, local_rangeos{{/str}}</a>
+    </p>
 
     {{#hasselectedpackage}}
     <h4 class="mb-3">{{packagetitle}}</h4>
     {{/hasselectedpackage}}
 
     {{#hasaus}}
+    <p class="text-muted small">{{rowsummary}}</p>
     <div class="table-responsive rangeos-table-panel">
     <table class="table table-striped table-sm">
         <thead>
             <tr>
                 <th style="width:5%">{{#str}}type, local_rangeos{{/str}}</th>
-                {{#showallmode}}
+                {{#showpackagecolumn}}
                 <th style="width:12%">Package</th>
-                {{/showallmode}}
+                {{/showpackagecolumn}}
                 <th style="width:14%">{{#str}}au_title, local_rangeos{{/str}}</th>
                 <th style="width:14%">{{#str}}au_iri, local_rangeos{{/str}}</th>
                 <th style="width:7%">{{#str}}status, local_rangeos{{/str}}</th>
@@ -173,7 +160,7 @@
                     <span class="badge badge-primary" title="{{scenarioname}}">RangeOS</span>
                     {{/israngeos}}
                 </td>
-                {{#showallmode}}
+                {{#showpackagecolumn}}
                 <td>
                     {{#haspackageinfo}}
                     <span class="small">{{packagetitle}}</span>
@@ -182,7 +169,7 @@
                     <span class="text-muted small">&mdash;</span>
                     {{/haspackageinfo}}
                 </td>
-                {{/showallmode}}
+                {{/showpackagecolumn}}
                 <td>
                     {{title}}
                     {{#israngeos}}{{#scenarioname}}
@@ -307,65 +294,38 @@
     {{^hasaus}}
     {{^haserror}}
     <div class="alert alert-info rangeos-empty-state">
-        {{#str}}nomappings, local_rangeos{{/str}}
+        {{#str}}nolibraryaus, local_rangeos{{/str}}
     </div>
     {{/haserror}}
     {{/hasaus}}
 
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+{{#js}}
+require(['core/first'], function() {
+    var container = document.querySelector('[data-versionid]');
     var envSelect = document.getElementById('rangeos-env-select');
     var pkgSelect = document.getElementById('rangeos-package-select');
-    var base = '{{baseurl}}';
+    var perpageSelect = document.getElementById('rangeos-perpage-select');
 
-    var currentShowall = {{#showall}}1{{/showall}}{{^showall}}0{{/showall}};
-    var currentPerpage = {{perpage}};
-
-    function buildUrl(params) {
-        var sep = base.indexOf('?') >= 0 ? '&' : '?';
-        var envid = envSelect ? envSelect.value : '';
-        var url = base + sep + 'envid=' + envid;
-        // Track state to keep paging options corect in url
-        var state = {
-            packageid: pkgSelect ? pkgSelect.value : '',
-            showall: currentShowall,
-            perpage: currentPerpage,
-            page: 0
-        };
-        for (var k in params) {
-            state[k] = params[k];
+    function applyFilters() {
+        var url = new URL(container.dataset.baseurl, window.location.href);
+        url.searchParams.set('envid', envSelect ? envSelect.value : '0');
+        if (pkgSelect) {
+            url.searchParams.set('packageid', pkgSelect.value);
         }
-        for (var k in state) {
-            if (state[k] !== undefined && state[k] !== null) {
-                url += '&' + k + '=' + state[k];
-            }
+        if (perpageSelect) {
+            url.searchParams.set('perpage', perpageSelect.value);
         }
-        return url;
+        url.searchParams.set('page', '0');
+        window.location.href = url.toString();
     }
 
     if (pkgSelect) {
-        pkgSelect.addEventListener('change', function() {
-            window.location.href = buildUrl({packageid: pkgSelect.value, page: 0});
-        });
+        pkgSelect.addEventListener('change', applyFilters);
     }
-
-    //The show all button fetches ALL the mappings available, they are not all shown at once. 
-    //The amount shown is based on the Per page drop down.
-    var toggleBtn = document.getElementById('rangeos-toggle-filter');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.location.href = buildUrl({showall: toggleBtn.getAttribute('data-showall'), page: 0});
-        });
-    }
-    // Choose how many to display on screen at a time.
-    var perpageSelect = document.getElementById('rangeos-perpage-select');
     if (perpageSelect) {
-        perpageSelect.addEventListener('change', function() {
-            window.location.href = buildUrl({perpage: perpageSelect.value, page: 0});
-        });
+        perpageSelect.addEventListener('change', applyFilters);
     }
 });
-</script>
+{{/js}}
