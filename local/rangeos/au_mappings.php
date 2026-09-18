@@ -25,14 +25,15 @@
 require_once(__DIR__ . '/../../config.php');
 
 use local_rangeos\environment_manager;
+use local_rangeos\global_au_listing;
 
 require_login();
 $context = context_system::instance();
 require_capability('local/rangeos:manageaumappings', $context);
 
 $envid = optional_param('envid', 0, PARAM_INT);
-$page = optional_param('page', 0, PARAM_INT);
-$pagesize = optional_param('pagesize', 25, PARAM_INT);
+$page = max(0, optional_param('page', 0, PARAM_INT));
+$pagesize = global_au_listing::page_size(optional_param('pagesize', 25, PARAM_INT));
 
 $PAGE->set_context($context);
 $PAGE->set_url('/local/rangeos/au_mappings.php', ['envid' => $envid]);
@@ -84,12 +85,10 @@ if ($envid > 0) {
 
         // Get AU mappings for current page.
         $_t = microtime(true);
-        $response = $client->list_au_mappings([
-            'page' => $page,
-            'pageSize' => $pagesize,
-        ]);
-        $mappings = $response['data'] ?? $response['items'] ?? $response;
-        $totalcount = $response['totalCount'] ?? $response['total'] ?? count($mappings);
+        $mappingpage = global_au_listing::get_page($client, $page, $pagesize);
+        $mappings = $mappingpage['mappings'];
+        $totalcount = $mappingpage['total'];
+        $page = $mappingpage['page'];
         $_perf('API: list_au_mappings', $_t, count($mappings) . ' items, page ' . $page);
     } catch (\Exception $e) {
         $error = $e->getMessage();
@@ -135,7 +134,7 @@ if (!empty($allauids)) {
 }
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('aumappings_global', 'local_rangeos'));
+echo \local_rangeos\output\dashboard::start('au_mappings', 'manageaumappings_desc');
 
 // Build template data.
 $envoptions = [];
@@ -192,6 +191,15 @@ foreach ($mappings as $mapping) {
     ];
 }
 
+$pagingurl = new moodle_url('/local/rangeos/au_mappings.php', [
+    'envid' => $envid,
+    'pagesize' => $pagesize,
+]);
+$pagesizeoptions = [];
+foreach (global_au_listing::PAGE_SIZES as $size) {
+    $pagesizeoptions[] = ['size' => $size, 'selected' => $size === $pagesize];
+}
+
 echo $OUTPUT->render_from_template('local_rangeos/au_mappings', [
     'environments' => $envoptions,
     'hasenvironments' => !empty($envoptions),
@@ -200,7 +208,20 @@ echo $OUTPUT->render_from_template('local_rangeos/au_mappings', [
     'hasmappings' => !empty($mappingdata),
     'error' => $error,
     'haserror' => !empty($error),
-    'baseurl' => (new moodle_url('/local/rangeos/au_mappings.php'))->out(false),
+    // The shared environment-change handler keeps the selected size and resets the page.
+    'baseurl' => (new moodle_url('/local/rangeos/au_mappings.php', ['pagesize' => $pagesize]))->out(false),
+    'pagination' => $error === '' && $totalcount > 0 ? [
+        'actionurl' => (new moodle_url('/local/rangeos/au_mappings.php'))->out(false),
+        'envid' => $envid,
+        'pagesizeoptions' => $pagesizeoptions,
+        'pagingbar' => $OUTPUT->paging_bar($totalcount, $page, $pagesize, $pagingurl),
+    ] : null,
+    'rowsummary' => get_string('globalmapping_count', 'local_rangeos', (object) [
+        'first' => $mappings ? $page * $pagesize + 1 : 0,
+        'last' => $mappings ? $page * $pagesize + count($mappings) : 0,
+        'total' => $totalcount,
+    ]),
 ]);
 
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

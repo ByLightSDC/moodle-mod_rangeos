@@ -1,0 +1,15 @@
+{{!
+    @template local_rangeos/dashboard_header
+    Shared introduction and capability-aware management navigation.
+}}
+<div class="rangeos-intro">
+    <span class="rangeos-eyebrow">RangeOS</span>
+    <p class="rangeos-description">{{description}}</p>
+</div>
+{{#hasnavigation}}
+<nav class="rangeos-navigation" aria-label="{{#str}}dashboardnavigation, local_rangeos{{/str}}">
+    {{#navigation}}
+    <a class="rangeos-nav-link{{#active}} is-active{{/active}}" href="{{url}}"{{#active}} aria-current="page"{{/active}}>{{title}}</a>
+    {{/navigation}}
+</nav>
+{{/hasnavigation}}

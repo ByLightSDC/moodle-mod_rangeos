@@ -133,12 +133,7 @@ foreach ($records as $rec) {
 }
 
 echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rangeos/manage.php'),
-    get_string('backtomanagement', 'local_rangeos'),
-    ['class' => 'btn btn-secondary mb-3']
-);
-echo $OUTPUT->heading(get_string('activityenvironments', 'local_rangeos'));
+echo \local_rangeos\output\dashboard::start('activity_environments', 'activityenvironments_desc');
 
 echo $OUTPUT->render_from_template('local_rangeos/activity_environments', [
     'activities'       => $activities,
@@ -151,4 +146,5 @@ echo $OUTPUT->render_from_template('local_rangeos/activity_environments', [
     'courseid'         => $courseid,
 ]);
 
+echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();
