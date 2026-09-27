@@ -30,4 +30,9 @@ $definitions = [
         'simplekeys' => true,
         'ttl' => 30,
     ],
+    'contentscenarios' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'ttl' => 45,
+    ],
 ];

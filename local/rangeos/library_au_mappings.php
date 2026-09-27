@@ -141,7 +141,7 @@ if ($envid > 0 && $aus) {
         $scenariobynamelookup = []; // name => uuid
         if (!empty($aus)) {
             $_t = microtime(true);
-            $scenarioresponse = $client->list_content_scenarios(['limit' => 1000]);
+            $scenarioresponse = $client->get_cached_content_scenarios(['limit' => 1000]);
             foreach ($scenarioresponse['data'] ?? [] as $s) {
                 $s = (array) $s;
                 $uuid = $s['uuid'] ?? '';
@@ -156,7 +156,8 @@ if ($envid > 0 && $aus) {
             $_perf(
                 'API: list_content_scenarios',
                 $_t,
-                count($scenarioresponse['data'] ?? []) . ' items, ' . count($scenariolookup) . ' resolved'
+                count($scenarioresponse['data'] ?? []) . ' items, ' . count($scenariolookup) . ' resolved, cache '
+                    . ($client->was_last_content_scenario_cache_hit() ? 'hit' : 'miss')
             );
         }
     } catch (\Exception $e) {

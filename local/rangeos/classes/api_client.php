@@ -60,6 +60,9 @@ class api_client {
     /** @var array Timing and cache statistics for the latest bulk mapping read. */
     private array $lastmappingreadstats = [];
 
+    /** @var bool Whether the latest cached content-scenario read was a cache hit. */
+    private bool $lastcontentscenariocachehit = false;
+
     /** @var array|null Memoised CURLOPT_RESOLVE entries for the AU mapping endpoint. */
     private ?array $mappingresolveinfo = null;
 
@@ -454,6 +457,36 @@ class api_client {
      */
     public function list_content_scenarios(array $params = []): array {
         return $this->get('/v1/content/range/scenarios', $params);
+    }
+
+    /**
+     * List content scenarios through the short-lived environment cache.
+     *
+     * The cache key includes normalized query parameters so this does not mix the
+     * full catalog used by the library page with paginated or searched results.
+     *
+     * @param array $params Query parameters.
+     * @return array Decoded response.
+     */
+    public function get_cached_content_scenarios(array $params = []): array {
+        ksort($params);
+        $cache = \cache::make('local_rangeos', 'contentscenarios');
+        $cachekey = 'env' . $this->environmentid . '_' . sha1(json_encode($params));
+        $cached = $cache->get($cachekey);
+        if (is_array($cached) && array_key_exists('response', $cached)) {
+            $this->lastcontentscenariocachehit = true;
+            return $cached['response'];
+        }
+
+        $this->lastcontentscenariocachehit = false;
+        $response = $this->list_content_scenarios($params);
+        $cache->set($cachekey, ['response' => $response]);
+        return $response;
+    }
+
+    /** Whether the latest get_cached_content_scenarios() call used cached data. */
+    public function was_last_content_scenario_cache_hit(): bool {
+        return $this->lastcontentscenariocachehit;
     }
 
     /**

@@ -34,6 +34,9 @@ class api_client_mapping_cache_test_double extends api_client {
     /** @var int Number of authentication attempts. */
     public int $authenticationcount = 0;
 
+    /** @var int Number of content-scenario API calls. */
+    public int $scenariocallcount = 0;
+
     /** Do not contact the token endpoint. */
     public function authenticate(bool $force = false): void {
         $this->authenticationcount++;
@@ -56,10 +59,21 @@ class api_client_mapping_cache_test_double extends api_client {
         }
         return $responses;
     }
+
+    /** Return a deterministic content-scenario response. */
+    public function list_content_scenarios(array $params = []): array {
+        $this->scenariocallcount++;
+        return [
+            'data' => [
+                ['uuid' => 'scenario-1', 'name' => 'Scenario One'],
+            ],
+        ];
+    }
 }
 
 /**
  * @covers \local_rangeos\api_client::get_au_mappings_by_ids
+ * @covers \local_rangeos\api_client::get_cached_content_scenarios
  */
 final class api_client_mapping_cache_test extends \advanced_testcase {
     /** Cache hits avoid HTTP, misses are fetched in waves no larger than five. */
@@ -99,5 +113,33 @@ final class api_client_mapping_cache_test extends \advanced_testcase {
         $this->assertSame(7, $secondstats['cachehits']);
         $this->assertSame(0, $secondstats['cachemisses']);
         $this->assertSame(0, $secondstats['waves']);
+    }
+
+    /** The content-scenario catalog is reused for the same environment and parameters. */
+    public function test_content_scenario_cache(): void {
+        $this->resetAfterTest();
+        \cache_helper::purge_by_definition('local_rangeos', 'contentscenarios');
+
+        $environment = (object) [
+            'id' => 43,
+            'apibaseurl' => 'https://rangeos.example.test',
+            'auth_token_url' => 'https://auth.example.test/token',
+            'auth_client_id' => 'client',
+            'auth_client_secret' => 'secret',
+        ];
+        $client = new api_client_mapping_cache_test_double($environment);
+
+        $first = $client->get_cached_content_scenarios(['limit' => 1000]);
+        $this->assertFalse($client->was_last_content_scenario_cache_hit());
+        $this->assertSame(1, $client->scenariocallcount);
+
+        $second = $client->get_cached_content_scenarios(['limit' => 1000]);
+        $this->assertTrue($client->was_last_content_scenario_cache_hit());
+        $this->assertSame(1, $client->scenariocallcount);
+        $this->assertSame($first, $second);
+
+        $client->get_cached_content_scenarios(['limit' => 500]);
+        $this->assertFalse($client->was_last_content_scenario_cache_hit());
+        $this->assertSame(2, $client->scenariocallcount);
     }
 }
