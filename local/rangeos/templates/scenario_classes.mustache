@@ -6,7 +6,9 @@
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
 <div data-baseurl="{{baseurl}}" data-envid="{{envid}}">
-    {{> local_rangeos/environment_selector }}
+    <div class="rangeos-toolbar">
+        {{> local_rangeos/environment_selector }}
+    </div>
 
     {{^hasenvironments}}
     <div class="alert alert-info rangeos-empty-state">
@@ -18,7 +20,7 @@
     <div class="alert alert-danger">{{error}}</div>
     {{/haserror}}
 
-    <div class="mb-3">
+    <div class="rangeos-actions">
         <button class="btn btn-primary" data-action="create-class">
             {{#str}}createclass, local_rangeos{{/str}}
         </button>
@@ -45,7 +47,7 @@
                         {{#str}}loading, local_rangeos{{/str}}
                     </span>
                 </td>
-                <td>
+                <td class="rangeos-row-actions">
                     <button class="btn btn-sm btn-outline-info"
                             data-action="view-instances"
                             data-classname="{{name}}"
@@ -78,7 +80,7 @@
 
     <!-- Expandable instances detail area -->
     <div id="class-instances-detail" class="mt-3" style="display:none;">
-        <h5 id="class-instances-title"></h5>
+        <h5 id="class-instances-title" class="rangeos-section-title"></h5>
         <div class="table-responsive rangeos-table-panel">
         <table class="table table-sm table-bordered">
             <thead>

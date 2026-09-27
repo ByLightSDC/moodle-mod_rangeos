@@ -95,7 +95,7 @@ if ($action === 'edit' || $action === 'add') {
     $heading = ($action === 'edit')
         ? get_string('editenvironment', 'local_rangeos')
         : get_string('addenvironment', 'local_rangeos');
-    echo $OUTPUT->heading($heading);
+    echo \local_rangeos\output\dashboard::heading($heading);
     echo html_writer::start_div('rangeos-form-panel');
     $form->display();
     echo html_writer::end_div();
@@ -113,7 +113,7 @@ echo \local_rangeos\output\dashboard::start('environment_profiles', 'manageenvir
 $addurl = new moodle_url('/local/rangeos/environment_profiles.php', ['action' => 'add']);
 echo html_writer::div(
     html_writer::link($addurl, get_string('addenvironment', 'local_rangeos'), ['class' => 'btn btn-primary']),
-    'mb-3'
+    'rangeos-actions'
 );
 
 if (empty($environments)) {

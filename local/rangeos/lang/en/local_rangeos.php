@@ -173,7 +173,6 @@ $string['dashboarddescription'] = 'Manage your range environments, scenario clas
 $string['dashboardexplore'] = 'Open management page';
 
 // Library mapping scope.
-$string['alllibrarypackages'] = 'All Projects';
 $string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages.';
 $string['nolibraryaus'] = 'No AUs found in the selected library packages.';
 $string['librarymapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} library AUs.';

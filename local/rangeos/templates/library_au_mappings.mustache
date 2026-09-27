@@ -6,21 +6,17 @@
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
 <div data-baseurl="{{baseurl}}" data-versionid="{{versionid}}">
-    {{> local_rangeos/environment_selector }}
-
     {{^hasenvironments}}
     <div class="alert alert-info rangeos-empty-state">
         {{#str}}noenvironments, local_rangeos{{/str}}
     </div>
     {{/hasenvironments}}
 
-    {{#haspackages}}
-    <form id="rangeos-package-search-form" class="form-group row rangeos-filter">
-        <label for="rangeos-package-search" class="col-auto col-form-label">
-            {{#str}}searchprojects, local_rangeos{{/str}}
-        </label>
-        <div class="col-sm-7 col-lg-6">
-            <div class="input-group">
+    <div class="rangeos-toolbar">
+        {{#haspackages}}
+        <form id="rangeos-package-search-form" class="rangeos-toolbar-group">
+            <div class="rangeos-field rangeos-field-grow">
+                <label for="rangeos-package-search">{{#str}}searchprojects, local_rangeos{{/str}}</label>
                 <input type="search"
                        id="rangeos-package-search"
                        class="form-control"
@@ -29,29 +25,27 @@
                        placeholder="{{#str}}searchprojects_placeholder, local_rangeos{{/str}}"
                        data-invalid-message="{{#str}}searchprojects_invalid, local_rangeos{{/str}}"
                        autocomplete="off">
-                <input type="hidden" id="rangeos-package-id" value="{{packageid}}">
-                <div class="input-group-append">
-                    <button type="submit" class="btn btn-primary">{{#str}}search{{/str}}</button>
-                    <button type="button" id="rangeos-package-clear" class="btn btn-outline-secondary">
-                        {{#str}}alllibrarypackages, local_rangeos{{/str}}
-                    </button>
-                </div>
             </div>
+            <button type="submit" class="btn btn-outline-primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+                {{#str}}search{{/str}}
+            </button>
             <datalist id="rangeos-package-suggestions">
                 {{#packages}}
                 <option value="{{title}}" data-packageid="{{id}}"></option>
                 {{/packages}}
             </datalist>
-        </div>
-    </form>
-    {{/haspackages}}
+        </form>
+        {{/haspackages}}
+        {{> local_rangeos/environment_selector }}
+    </div>
 
     {{#haserror}}
     <div class="alert alert-danger">{{error}}</div>
     {{/haserror}}
 
     {{#hasenvironments}}
-    <div class="mb-3">
+    <div class="rangeos-actions">
         <a href="{{mapallurl}}"
            class="btn btn-success"
            onclick="return confirm('This will create mappings for every unmapped AU that has a default scenario in its RC5 config. Continue?')">
@@ -73,7 +67,7 @@
                 <p class="mb-1 small font-weight-bold text-muted text-uppercase">
                     {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
                     {{^hascourse}}No local course{{/hascourse}}
-                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                    <span class="rangeos-tag ml-1">{{itemcount}}</span>
                 </p>
                 <div class="table-responsive rangeos-table-panel">
                 <table class="table table-sm table-bordered mb-3">
@@ -101,7 +95,7 @@
                 <p class="mb-1 small font-weight-bold text-muted text-uppercase">
                     {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
                     {{^hascourse}}No local course{{/hascourse}}
-                    <span class="badge badge-secondary ml-1">{{itemcount}}</span>
+                    <span class="rangeos-tag ml-1">{{itemcount}}</span>
                 </p>
                 <div class="table-responsive rangeos-table-panel">
                 <table class="table table-sm table-bordered mb-3">
@@ -142,11 +136,11 @@
     </p>
 
     {{#hasselectedpackage}}
-    <h4 class="mb-3">{{packagetitle}}</h4>
+    <h4 class="rangeos-section-title">{{packagetitle}}</h4>
     {{/hasselectedpackage}}
 
     {{#hasaus}}
-    <p class="text-muted small">{{rowsummary}}</p>
+    <p class="rangeos-result-count">{{rowsummary}}</p>
     <div class="table-responsive rangeos-table-panel">
     <table class="table table-striped table-sm">
         <thead>
@@ -179,10 +173,12 @@
                 </td>
                 {{/showpackagecolumn}}
                 <td>
-                    <span class="badge badge-secondary mr-1">cmi5</span>
-                    {{#israngeos}}
-                    <span class="badge badge-primary" title="{{scenarioname}}">RangeOS</span>
-                    {{/israngeos}}
+                    <div class="rangeos-tag-list">
+                        <span class="rangeos-tag">cmi5</span>
+                        {{#israngeos}}
+                        <span class="rangeos-tag rangeos-tag-accent" title="{{scenarioname}}">RangeOS</span>
+                        {{/israngeos}}
+                    </div>
                 </td>
                 <td>
                     {{title}}
@@ -194,12 +190,14 @@
                 <td>
                     {{#israngeos}}
                         {{#scenario_count}}
-                        {{#scenario_badges}}
-                        <span class="badge badge-info mr-1 mb-1">{{.}}</span>
-                        {{/scenario_badges}}
+                        <div class="rangeos-tag-list">
+                            {{#scenario_badges}}
+                            <span class="rangeos-tag rangeos-tag-accent" title="{{.}}">{{.}}</span>
+                            {{/scenario_badges}}
+                        </div>
                         {{/scenario_count}}
                         {{^scenario_count}}
-                        <span class="text-muted">None</span>
+                        <span class="rangeos-tag rangeos-tag-empty">None</span>
                         {{/scenario_count}}
                     {{/israngeos}}
                     {{^israngeos}}
@@ -236,7 +234,7 @@
                     {{/israngeos}}
                 </td>
                 {{/hasselectedpackage}}
-                <td>
+                <td class="rangeos-row-actions">
                     {{#israngeos}}
                         {{#ismapped}}
                         <button class="btn btn-sm btn-outline-primary mr-1"
@@ -300,8 +298,6 @@ require(['core/first'], function() {
     var envSelect = document.getElementById('rangeos-env-select');
     var packageForm = document.getElementById('rangeos-package-search-form');
     var packageSearch = document.getElementById('rangeos-package-search');
-    var packageId = document.getElementById('rangeos-package-id');
-    var packageClear = document.getElementById('rangeos-package-clear');
     var packageOptions = Array.prototype.slice.call(
         document.querySelectorAll('#rangeos-package-suggestions option')
     );
@@ -321,6 +317,7 @@ require(['core/first'], function() {
         packageForm.addEventListener('submit', function(event) {
             event.preventDefault();
             var query = packageSearch.value.trim();
+            // An empty field means every project, which is how the filter is cleared.
             if (!query) {
                 applyFilters('0');
                 return;
@@ -333,13 +330,7 @@ require(['core/first'], function() {
                 packageSearch.reportValidity();
                 return;
             }
-            packageId.value = match.dataset.packageid;
-            applyFilters(packageId.value);
-        });
-        packageClear.addEventListener('click', function() {
-            packageSearch.value = '';
-            packageId.value = '0';
-            applyFilters('0');
+            applyFilters(match.dataset.packageid);
         });
     }
 });

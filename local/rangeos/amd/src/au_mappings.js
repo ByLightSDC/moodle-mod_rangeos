@@ -199,7 +199,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
     // Use a simple Bootstrap modal since ModalFactory can be finicky with dynamic content.
     const modalId = 'rangeos-mapping-modal-' + Date.now();
     const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog">
+        <div class="modal fade rangeos-modal" id="${modalId}" tabindex="-1" role="dialog">
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -558,12 +558,12 @@ const renderSelectedScenarios = (modalEl, selectedScenarios) => {
 
     selectedScenarios.forEach((scenario) => {
         const badge = document.createElement('span');
-        badge.className = 'badge badge-primary mr-1 mb-1 p-2';
-        badge.appendChild(document.createTextNode(scenario.name + ' '));
+        badge.className = 'rangeos-chip';
+        badge.appendChild(document.createTextNode(scenario.name));
 
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.className = 'close text-white ml-1';
+        remove.className = 'rangeos-chip-remove';
         remove.setAttribute('aria-label', `Remove ${scenario.name}`);
         remove.innerHTML = '<span aria-hidden="true">&times;</span>';
         remove.addEventListener('click', () => {

@@ -23,18 +23,21 @@
             <td><code>{{apibaseurl}}</code></td>
             <td>
                 {{#isdefault}}
-                    <span class="badge badge-success">{{#str}}default{{/str}}</span>
+                    <span class="rangeos-pill rangeos-pill-ok">{{#str}}default{{/str}}</span>
+                {{/isdefault}}
+                {{^isdefault}}
+                    <span class="text-muted">&mdash;</span>
                 {{/isdefault}}
             </td>
             <td>
                 {{#hasprofile}}
-                    <span class="badge badge-info">{{#str}}active{{/str}}</span>
+                    <span class="rangeos-pill rangeos-pill-info">{{#str}}active{{/str}}</span>
                 {{/hasprofile}}
                 {{^hasprofile}}
-                    <span class="badge badge-warning">No profile</span>
+                    <span class="rangeos-pill rangeos-pill-warn">No profile</span>
                 {{/hasprofile}}
             </td>
-            <td>
+            <td class="rangeos-row-actions">
                 <a href="{{editurl}}" class="btn btn-sm btn-outline-primary">
                     {{#str}}edit{{/str}}
                 </a>

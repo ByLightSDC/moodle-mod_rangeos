@@ -1,18 +1,17 @@
 {{!
     @template local_rangeos/environment_selector
     Shared environment filter. The ID is also used by the existing AMD modules.
+
+    Renders the field only. The caller wraps it in .rangeos-toolbar, alongside
+    whatever filters that page has, so every page's controls share one bar.
 }}
     {{#hasenvironments}}
-    <div class="form-group row rangeos-filter">
-        <label for="rangeos-env-select" class="col-auto col-form-label">
-            {{#str}}selectenvironment, local_rangeos{{/str}}
-        </label>
-        <div class="col-sm-4">
-            <select id="rangeos-env-select" class="custom-select">
-                {{#environments}}
-                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
-                {{/environments}}
-            </select>
-        </div>
+    <div class="rangeos-field rangeos-field-env">
+        <label for="rangeos-env-select">{{#str}}selectenvironment, local_rangeos{{/str}}</label>
+        <select id="rangeos-env-select" class="custom-select">
+            {{#environments}}
+            <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+            {{/environments}}
+        </select>
     </div>
     {{/hasenvironments}}

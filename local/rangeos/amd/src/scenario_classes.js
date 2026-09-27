@@ -144,8 +144,8 @@ const showClassInstances = (className, rangeId) => {
         body.innerHTML = '';
         result.instances.forEach((inst) => {
             const tr = document.createElement('tr');
-            const statusClass = inst.status === 'Ready' ? 'success'
-                : inst.status === 'NotReady' ? 'warning' : 'secondary';
+            const statusClass = inst.status === 'Ready' ? ' rangeos-pill-ok'
+                : inst.status === 'NotReady' ? ' rangeos-pill-warn' : '';
             const seatLabel = inst.studentid ? 'Seat ' + escapeHtml(inst.studentid) : '';
             let assignedLabel;
             if (inst.assigned) {
@@ -158,7 +158,7 @@ const showClassInstances = (className, rangeId) => {
             tr.innerHTML = `
                 <td>${seatLabel}</td>
                 <td>${escapeHtml(inst.scenarioname)}</td>
-                <td><span class="badge badge-${statusClass}">${escapeHtml(inst.status)}</span></td>
+                <td><span class="rangeos-pill${statusClass}">${escapeHtml(inst.status)}</span></td>
                 <td>${assignedLabel}</td>
                 <td><code class="small">${escapeHtml(inst.id)}</code></td>
                 <td>
@@ -211,7 +211,7 @@ const deleteScenarioInstance = (rangeId, scenarioId, className) => {
 const showCreateClassModal = () => {
     const modalId = 'rangeos-create-class-modal-' + Date.now();
     const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog">
+        <div class="modal fade rangeos-modal" id="${modalId}" tabindex="-1" role="dialog">
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -371,7 +371,7 @@ const showCreateClassModal = () => {
 const showAddSeatsModal = (className, knownScenarioId) => {
     const modalId = 'rangeos-add-seats-modal-' + Date.now();
     const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog">
+        <div class="modal fade rangeos-modal" id="${modalId}" tabindex="-1" role="dialog">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">

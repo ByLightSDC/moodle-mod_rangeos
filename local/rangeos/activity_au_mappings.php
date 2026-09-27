@@ -75,7 +75,8 @@ if ($envid > 0) {
 
 echo $OUTPUT->header();
 echo \local_rangeos\output\dashboard::start('activity_au_mappings', 'manageaumappings_desc');
-echo $OUTPUT->heading(get_string('aumappings_activity', 'local_rangeos') . ': ' . format_string($cmi5->name));
+echo \local_rangeos\output\dashboard::heading(
+    get_string('aumappings_activity', 'local_rangeos') . ': ' . format_string($cmi5->name));
 
 // Build template data.
 $envoptions = [];
