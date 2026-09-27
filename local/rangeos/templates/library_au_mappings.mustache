@@ -246,14 +246,6 @@
                                 data-scenarios="{{scenarios_json}}">
                             {{#str}}edit{{/str}}
                         </button>
-                        {{#firstscenariouuid}}
-                        <button class="btn btn-sm btn-outline-success"
-                                data-action="create-class"
-                                data-scenariouuid="{{firstscenariouuid}}"
-                                data-autitle="{{title}}">
-                            {{#str}}createclass, local_rangeos{{/str}}
-                        </button>
-                        {{/firstscenariouuid}}
                         {{/ismapped}}
                         {{^ismapped}}
                         <button class="btn btn-sm btn-outline-primary mr-1"

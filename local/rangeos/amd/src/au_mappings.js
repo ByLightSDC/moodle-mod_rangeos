@@ -89,14 +89,6 @@ export const init = () => {
             );
         }
 
-        const classBtn = e.target.closest('[data-action="create-class"]');
-        if (classBtn) {
-            e.preventDefault();
-            showCreateClassForm(
-                classBtn.dataset.scenariouuid || '',
-                classBtn.dataset.autitle || ''
-            );
-        }
     });
 };
 
@@ -587,112 +579,6 @@ const renderSelectedScenarios = (modalEl, selectedScenarios) => {
 
         badge.appendChild(remove);
         selectedContainer.appendChild(badge);
-    });
-};
-
-/**
- * Show modal form to create a class for a scenario.
- *
- * @param {string} scenarioUuid Content scenario UUID.
- * @param {string} auTitle AU title for display.
- */
-const showCreateClassForm = async(scenarioUuid, auTitle) => {
-    const title = await getString('createclass', 'local_rangeos');
-
-    const container = document.createElement('div');
-    container.innerHTML = `
-        <p class="text-muted mb-3">Create a class for: <strong>${escapeHtml(auTitle)}</strong></p>
-        <div class="form-group">
-            <label for="class-id-input">Class ID</label>
-            <input type="text" class="form-control" id="class-id-input"
-                   placeholder="e.g. cyber-101-spring-2026">
-            <small class="form-text text-muted">
-                A unique identifier for this class batch.
-            </small>
-        </div>
-        <div class="form-group">
-            <label for="class-count-input">Number of seats</label>
-            <input type="number" class="form-control" id="class-count-input"
-                   value="10" min="1" max="500">
-            <small class="form-text text-muted">
-                Number of scenario instances to pre-deploy.
-            </small>
-        </div>
-    `;
-
-    const modalId = 'rangeos-class-modal-' + Date.now();
-    const modalHtml = `
-        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">${escapeHtml(title)}</h5>
-                    </div>
-                    <div class="modal-body" id="${modalId}-body"></div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="${modalId}-cancel">Cancel</button>
-                        <button type="button" class="btn btn-success" id="${modalId}-create">Create</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = modalHtml;
-    document.body.appendChild(wrapper);
-
-    const modalEl = document.getElementById(modalId);
-    const modalBody = document.getElementById(modalId + '-body');
-    modalBody.appendChild(container);
-
-    $(modalEl).modal('show');
-
-    // Cancel handler (data-dismiss alone isn't reliably wired up on every Moodle page).
-    document.getElementById(modalId + '-cancel').addEventListener('click', () => {
-        $(modalEl).modal('hide');
-    });
-
-    document.getElementById(modalId + '-create').addEventListener('click', () => {
-        const classId = modalEl.querySelector('#class-id-input').value.trim();
-        const count = parseInt(modalEl.querySelector('#class-count-input').value, 10);
-
-        if (!classId) {
-            Notification.addNotification({message: 'Class ID is required.', type: 'error'});
-            return;
-        }
-        if (!count || count < 1) {
-            Notification.addNotification({message: 'Count must be at least 1.', type: 'error'});
-            return;
-        }
-
-        const createBtn = document.getElementById(modalId + '-create');
-        createBtn.disabled = true;
-        createBtn.textContent = 'Creating...';
-
-        Ajax.call([{
-            methodname: 'local_rangeos_create_class',
-            args: {
-                envid: envId,
-                scenarioid: scenarioUuid,
-                classid: classId,
-                count: count,
-            },
-        }])[0].then(() => {
-            $(modalEl).modal('hide');
-            Notification.addNotification({
-                message: `Class "${classId}" created with ${count} seats.`,
-                type: 'success',
-            });
-        }).catch((err) => {
-            createBtn.disabled = false;
-            createBtn.textContent = 'Create';
-            Notification.exception(err);
-        });
-    });
-
-    $(modalEl).on('hidden.bs.modal', () => {
-        wrapper.remove();
     });
 };
 
