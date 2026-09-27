@@ -133,7 +133,8 @@ const createDefaultMapping = async(auId, auTitle, defaultScenarioName) => {
         const scenario = (result.scenarios || []).find(s => s.name === defaultScenarioName);
 
         if (scenario) {
-            showMappingForm(auId, auTitle, JSON.stringify([scenario.id]), false, defaultScenarioName);
+            const selected = JSON.stringify([{id: scenario.id, name: scenario.name}]);
+            showMappingForm(auId, auTitle, selected, false, defaultScenarioName);
         } else {
             Notification.addNotification({
                 message: `Default scenario "${defaultScenarioName}" was not found in this environment.`,
@@ -170,13 +171,14 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
            </div>`
         : '';
 
+    const selectedScenarios = parseSelectedScenarios(existingScenarios);
+
     // Create a container div for the form.
     const container = document.createElement('div');
     container.innerHTML = `
         <div class="form-group">
-            <label for="mapping-auid">AU Id (IRI)</label>
-            <input type="text" class="form-control" id="mapping-auid"
-                   value="${escapeAttr(auId)}" ${auId ? 'readonly' : ''}>
+            <div class="font-weight-bold">AU ID (IRI)</div>
+            <div class="form-control-plaintext"><code class="text-break">${escapeHtml(auId)}</code></div>
         </div>
         <div class="form-group">
             <label for="mapping-name">Name</label>
@@ -184,13 +186,21 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
                    value="${escapeAttr(auTitle)}">
         </div>
         <div class="form-group">
-            <label for="mapping-scenarios">Scenarios (JSON array of UUIDs)</label>
+            <label for="mapping-scenario-search">Scenarios</label>
             ${defaultHint}
-            <textarea class="form-control" id="mapping-scenarios"
-                      rows="4">${escapeHtml(existingScenarios)}</textarea>
-            <small class="form-text text-muted">
-                Enter scenario UUIDs as a JSON array, e.g. ["uuid1", "uuid2"]
-            </small>
+            <div class="input-group mb-2">
+                <input type="search" class="form-control" id="mapping-scenario-search"
+                       placeholder="Search scenarios by name..." autocomplete="off">
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" id="mapping-scenario-search-btn">
+                        Search
+                    </button>
+                </div>
+            </div>
+            <div id="mapping-scenario-results" class="list-group mb-2"
+                 style="max-height: 360px; overflow-y: auto;"></div>
+            <div id="mapping-scenario-pagination" class="mb-3"></div>
+            <div id="mapping-selected-scenarios"></div>
         </div>
     `;
 
@@ -224,6 +234,7 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
 
     // Show modal using jQuery (Moodle ships Bootstrap 4 with jQuery).
     $(modalEl).modal('show');
+    initScenarioPicker(modalEl, selectedScenarios);
 
     // Cancel handler (data-dismiss alone isn't reliably wired up on every Moodle page).
     document.getElementById(modalId + '-cancel').addEventListener('click', () => {
@@ -232,12 +243,10 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
 
     // Save handler.
     document.getElementById(modalId + '-save').addEventListener('click', () => {
-        const mappingAuId = modalEl.querySelector('#mapping-auid').value.trim();
         const mappingName = modalEl.querySelector('#mapping-name').value.trim();
-        const scenariosJson = modalEl.querySelector('#mapping-scenarios').value.trim();
 
-        if (!mappingAuId) {
-            Notification.addNotification({message: 'AU Id (IRI) is required.', type: 'error'});
+        if (selectedScenarios.length === 0) {
+            Notification.addNotification({message: 'Select at least one scenario.', type: 'error'});
             return;
         }
 
@@ -249,9 +258,9 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
             methodname: wsFunction,
             args: {
                 envid: envId,
-                auid: mappingAuId,
+                auid: auId,
                 name: mappingName,
-                scenarios_json: scenariosJson || '[]',
+                scenarios_json: JSON.stringify(selectedScenarios.map(scenario => scenario.id)),
             },
         }])[0].then(() => {
             $(modalEl).modal('hide');
@@ -262,6 +271,322 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
     // Cleanup on close.
     $(modalEl).on('hidden.bs.modal', () => {
         wrapper.remove();
+    });
+};
+
+/**
+ * Read the scenarios already mapped to this AU.
+ *
+ * The page supplies {id, name} objects, while the mapping API stores bare UUIDs, so both
+ * shapes are accepted and anything without a UUID is dropped.
+ *
+ * @param {string} scenariosJson JSON array of scenario UUIDs or objects.
+ * @returns {Array} Selected scenarios as {id, name} objects.
+ */
+const parseSelectedScenarios = (scenariosJson) => {
+    let values;
+    try {
+        values = JSON.parse(scenariosJson || '[]');
+    } catch {
+        return [];
+    }
+    if (!Array.isArray(values)) {
+        return [];
+    }
+
+    return values.map((scenario) => {
+        if (typeof scenario === 'string') {
+            return {id: scenario, name: scenario};
+        }
+        const id = scenario?.uuid || scenario?.scenarioId || scenario?.id || '';
+        return {id, name: scenario?.name || id};
+    }).filter(scenario => scenario.id);
+};
+
+/**
+ * Wire up the scenario picker and load its first page of results.
+ *
+ * @param {HTMLElement} modalEl Mapping modal.
+ * @param {Array} selectedScenarios Mutable selection, updated as the user picks scenarios.
+ */
+const initScenarioPicker = (modalEl, selectedScenarios) => {
+    const searchInput = modalEl.querySelector('#mapping-scenario-search');
+    const searchState = {query: '', page: 0, pagesize: 10, requestId: 0};
+    const search = () => {
+        searchState.query = searchInput.value.trim();
+        searchState.page = 0;
+        searchScenarios(modalEl, searchState, selectedScenarios);
+    };
+
+    modalEl.querySelector('#mapping-scenario-search-btn').addEventListener('click', search);
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            search();
+        }
+    });
+
+    renderSelectedScenarios(modalEl, selectedScenarios);
+    searchScenarios(modalEl, searchState, selectedScenarios);
+};
+
+/**
+ * Load the current page of search results and render them as selectable rows.
+ *
+ * @param {HTMLElement} modalEl Mapping modal.
+ * @param {Object} searchState Current search term, page, page size, and request counter.
+ * @param {Array} selectedScenarios Mutable selection.
+ */
+const searchScenarios = (modalEl, searchState, selectedScenarios) => {
+    const results = modalEl.querySelector('#mapping-scenario-results');
+    const pagination = modalEl.querySelector('#mapping-scenario-pagination');
+    const requestId = ++searchState.requestId;
+    results.innerHTML = '<div class="p-2 text-muted">Searching...</div>';
+    pagination.innerHTML = '';
+
+    Ajax.call([{
+        methodname: 'local_rangeos_list_scenarios',
+        args: {
+            envid: envId,
+            search: searchState.query,
+            page: searchState.page,
+            pagesize: searchState.pagesize,
+        },
+    }])[0].then((response) => {
+        // Ignore a response another search or page change has already superseded.
+        if (requestId !== searchState.requestId) {
+            return;
+        }
+
+        const scenarios = response.scenarios || [];
+        if (scenarios.length === 0) {
+            results.innerHTML = '<div class="p-2 text-muted">No scenarios found.</div>';
+            return;
+        }
+
+        results.innerHTML = '';
+        scenarios.forEach((scenario) => {
+            results.appendChild(buildScenarioResult(scenario, modalEl, selectedScenarios));
+        });
+        // Result names are the freshest ones available, so redraw the badges with them.
+        renderSelectedScenarios(modalEl, selectedScenarios);
+        renderScenarioPagination(modalEl, searchState, response.total || 0, selectedScenarios);
+    }).catch((error) => {
+        if (requestId === searchState.requestId) {
+            results.innerHTML = '<div class="p-2 text-danger">Unable to search scenarios.</div>';
+        }
+        Notification.exception(error);
+    });
+};
+
+/**
+ * Build one selectable search result.
+ *
+ * @param {Object} scenario Scenario returned by the web service.
+ * @param {HTMLElement} modalEl Mapping modal.
+ * @param {Array} selectedScenarios Mutable selection.
+ * @returns {HTMLElement} Result row.
+ */
+const buildScenarioResult = (scenario, modalEl, selectedScenarios) => {
+    const selected = selectedScenarios.find(item => item.id === scenario.id);
+    if (selected) {
+        // Mappings store UUIDs only, so take the display name from the catalog.
+        selected.name = scenario.name;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'list-group-item list-group-item-action';
+    button.dataset.scenarioId = scenario.id;
+    button.appendChild(createResultLine('strong', scenario.name));
+
+    if (scenario.description) {
+        button.appendChild(createResultLine('small', scenario.description, 'd-block'));
+    }
+
+    const details = [
+        scenario.author ? `Author: ${scenario.author}` : '',
+        scenario.createdat ? `Created: ${formatScenarioDate(scenario.createdat)}` : '',
+        scenario.updatedat ? `Updated: ${formatScenarioDate(scenario.updatedat)}` : '',
+    ].filter(Boolean);
+    if (details.length > 0) {
+        button.appendChild(createResultLine('small', details.join(' · '), 'd-block mt-1'));
+    }
+
+    setResultSelected(button, Boolean(selected));
+    button.addEventListener('click', () => {
+        toggleScenario(selectedScenarios, scenario);
+        setResultSelected(button, selectedScenarios.some(item => item.id === scenario.id));
+        renderSelectedScenarios(modalEl, selectedScenarios);
+    });
+
+    return button;
+};
+
+/**
+ * Create one line of text inside a search result.
+ *
+ * @param {string} tag Element tag name.
+ * @param {string} text Line text.
+ * @param {string} classes Extra classes for the line.
+ * @returns {HTMLElement} The line element.
+ */
+const createResultLine = (tag, text, classes = '') => {
+    const line = document.createElement(tag);
+    line.className = classes;
+    line.textContent = text;
+    return line;
+};
+
+/**
+ * Mark a result as selected, keeping its secondary lines legible on the active background.
+ *
+ * @param {HTMLElement} button Result row.
+ * @param {boolean} isSelected Whether the scenario is in the selection.
+ */
+const setResultSelected = (button, isSelected) => {
+    button.classList.toggle('active', isSelected);
+    button.querySelectorAll('small').forEach((line) => {
+        line.classList.toggle('text-muted', !isSelected);
+    });
+};
+
+/**
+ * Add a scenario to the selection, or remove it when it is already selected.
+ *
+ * @param {Array} selectedScenarios Mutable selection.
+ * @param {Object} scenario Scenario to toggle.
+ */
+const toggleScenario = (selectedScenarios, scenario) => {
+    if (!removeScenario(selectedScenarios, scenario.id)) {
+        selectedScenarios.push({id: scenario.id, name: scenario.name});
+    }
+};
+
+/**
+ * Remove a scenario from the selection.
+ *
+ * @param {Array} selectedScenarios Mutable selection.
+ * @param {string} scenarioId Scenario UUID.
+ * @returns {boolean} Whether the scenario was selected.
+ */
+const removeScenario = (selectedScenarios, scenarioId) => {
+    const index = selectedScenarios.findIndex(item => item.id === scenarioId);
+    if (index >= 0) {
+        selectedScenarios.splice(index, 1);
+    }
+    return index >= 0;
+};
+
+/**
+ * Render paging controls for the scenario search results.
+ *
+ * @param {HTMLElement} modalEl Mapping modal.
+ * @param {Object} searchState Current search term, page, page size, and request counter.
+ * @param {number} total Total matching scenarios.
+ * @param {Array} selectedScenarios Mutable selection.
+ */
+const renderScenarioPagination = (modalEl, searchState, total, selectedScenarios) => {
+    const container = modalEl.querySelector('#mapping-scenario-pagination');
+    container.innerHTML = '';
+    if (total === 0) {
+        return;
+    }
+
+    const pageCount = Math.ceil(total / searchState.pagesize);
+    const goToPage = (page) => {
+        searchState.page = page;
+        searchScenarios(modalEl, searchState, selectedScenarios);
+    };
+
+    const summary = document.createElement('small');
+    summary.className = 'text-muted';
+    summary.textContent = `Page ${searchState.page + 1} of ${pageCount} · ${total} scenarios`;
+
+    const controls = document.createElement('div');
+    controls.className = 'd-flex justify-content-between align-items-center';
+    controls.appendChild(createPageButton('Previous', searchState.page === 0, () => goToPage(searchState.page - 1)));
+    controls.appendChild(summary);
+    controls.appendChild(
+        createPageButton('Next', searchState.page >= pageCount - 1, () => goToPage(searchState.page + 1))
+    );
+    container.appendChild(controls);
+};
+
+/**
+ * Create one paging button.
+ *
+ * @param {string} label Button label.
+ * @param {boolean} disabled Whether the button is unavailable.
+ * @param {Function} onClick Click handler.
+ * @returns {HTMLElement} The button.
+ */
+const createPageButton = (label, disabled, onClick) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-sm btn-outline-secondary';
+    button.textContent = label;
+    button.disabled = disabled;
+    button.addEventListener('click', onClick);
+    return button;
+};
+
+/**
+ * Format an API date for the user's locale, keeping unrecognized values as-is.
+ *
+ * @param {string} value API date value, as seconds, milliseconds or a date string.
+ * @returns {string} Display date.
+ */
+const formatScenarioDate = (value) => {
+    const seconds = /^\d+$/.test(value) ? Number(value) : null;
+    // Anything beyond the year 2286 in seconds is already milliseconds.
+    const timestamp = seconds === null ? value : (seconds > 9999999999 ? seconds : seconds * 1000);
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
+
+/**
+ * Render the scenarios currently selected for the mapping.
+ *
+ * @param {HTMLElement} modalEl Mapping modal.
+ * @param {Array} selectedScenarios Mutable selection.
+ */
+const renderSelectedScenarios = (modalEl, selectedScenarios) => {
+    const selectedContainer = modalEl.querySelector('#mapping-selected-scenarios');
+    selectedContainer.innerHTML = '';
+    if (selectedScenarios.length === 0) {
+        selectedContainer.innerHTML = '<small class="text-muted">No scenarios selected.</small>';
+        return;
+    }
+
+    const label = document.createElement('div');
+    label.className = 'small font-weight-bold mb-1';
+    label.textContent = 'Selected scenarios';
+    selectedContainer.appendChild(label);
+
+    selectedScenarios.forEach((scenario) => {
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-primary mr-1 mb-1 p-2';
+        badge.appendChild(document.createTextNode(scenario.name + ' '));
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'close text-white ml-1';
+        remove.setAttribute('aria-label', `Remove ${scenario.name}`);
+        remove.innerHTML = '<span aria-hidden="true">&times;</span>';
+        remove.addEventListener('click', () => {
+            removeScenario(selectedScenarios, scenario.id);
+            renderSelectedScenarios(modalEl, selectedScenarios);
+            const result = modalEl.querySelector(
+                `#mapping-scenario-results button[data-scenario-id="${CSS.escape(scenario.id)}"]`
+            );
+            if (result) {
+                setResultSelected(result, false);
+            }
+        });
+
+        badge.appendChild(remove);
+        selectedContainer.appendChild(badge);
     });
 };
 

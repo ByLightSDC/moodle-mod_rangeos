@@ -226,10 +226,14 @@ foreach ($aus as $au) {
     $scenarios = $mapping['scenarios'] ?? [];
 
     $scenariobadges = [];
+    $scenariooptions = [];
     foreach ($scenarios as $s) {
         $uuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
         $name = $scenariolookup[$uuid] ?? '';
         $scenariobadges[] = $name ?: $uuid;
+        if ($uuid) {
+            $scenariooptions[] = ['id' => $uuid, 'name' => $name ?: $uuid];
+        }
     }
 
     // Read config.json for RangeOS AU detection (only when we have a version).
@@ -299,7 +303,7 @@ foreach ($aus as $au) {
         'ismapped' => !empty($scenarios),
         'scenario_badges' => $scenariobadges,
         'scenario_count' => count($scenarios),
-        'scenarios_json' => json_encode($scenarios),
+        'scenarios_json' => json_encode($scenariooptions),
         'mapping_name' => $mapping['name'] ?? '',
         'classmode' => $classmode,
         'defaultclassid' => $defaultclassid,
