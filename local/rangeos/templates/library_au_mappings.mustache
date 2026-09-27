@@ -15,19 +15,35 @@
     {{/hasenvironments}}
 
     {{#haspackages}}
-    <div class="form-group row rangeos-filter">
-        <label for="rangeos-package-select" class="col-auto col-form-label">
-            {{#str}}selectpackage, local_rangeos{{/str}}
+    <form id="rangeos-package-search-form" class="form-group row rangeos-filter">
+        <label for="rangeos-package-search" class="col-auto col-form-label">
+            {{#str}}searchprojects, local_rangeos{{/str}}
         </label>
-        <div class="col-sm-6">
-            <select id="rangeos-package-select" class="custom-select">
-                <option value="0">{{#str}}alllibrarypackages, local_rangeos{{/str}}</option>
+        <div class="col-sm-7 col-lg-6">
+            <div class="input-group">
+                <input type="search"
+                       id="rangeos-package-search"
+                       class="form-control"
+                       list="rangeos-package-suggestions"
+                       value="{{packagetitle}}"
+                       placeholder="{{#str}}searchprojects_placeholder, local_rangeos{{/str}}"
+                       data-invalid-message="{{#str}}searchprojects_invalid, local_rangeos{{/str}}"
+                       autocomplete="off">
+                <input type="hidden" id="rangeos-package-id" value="{{packageid}}">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">{{#str}}search{{/str}}</button>
+                    <button type="button" id="rangeos-package-clear" class="btn btn-outline-secondary">
+                        {{#str}}alllibrarypackages, local_rangeos{{/str}}
+                    </button>
+                </div>
+            </div>
+            <datalist id="rangeos-package-suggestions">
                 {{#packages}}
-                <option value="{{id}}" {{#selected}}selected{{/selected}}>{{title}}</option>
+                <option value="{{title}}" data-packageid="{{id}}"></option>
                 {{/packages}}
-            </select>
+            </datalist>
         </div>
-    </div>
+    </form>
     {{/haspackages}}
 
     {{#haserror}}
@@ -290,20 +306,49 @@
 require(['core/first'], function() {
     var container = document.querySelector('[data-versionid]');
     var envSelect = document.getElementById('rangeos-env-select');
-    var pkgSelect = document.getElementById('rangeos-package-select');
+    var packageForm = document.getElementById('rangeos-package-search-form');
+    var packageSearch = document.getElementById('rangeos-package-search');
+    var packageId = document.getElementById('rangeos-package-id');
+    var packageClear = document.getElementById('rangeos-package-clear');
+    var packageOptions = Array.prototype.slice.call(
+        document.querySelectorAll('#rangeos-package-suggestions option')
+    );
 
-    function applyFilters() {
+    function applyFilters(selectedPackageId) {
         var url = new URL(container.dataset.baseurl, window.location.href);
         url.searchParams.set('envid', envSelect ? envSelect.value : '0');
-        if (pkgSelect) {
-            url.searchParams.set('packageid', pkgSelect.value);
-        }
+        url.searchParams.set('packageid', selectedPackageId);
         url.searchParams.set('page', '0');
         window.location.href = url.toString();
     }
 
-    if (pkgSelect) {
-        pkgSelect.addEventListener('change', applyFilters);
+    if (packageForm) {
+        packageSearch.addEventListener('input', function() {
+            packageSearch.setCustomValidity('');
+        });
+        packageForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            var query = packageSearch.value.trim();
+            if (!query) {
+                applyFilters('0');
+                return;
+            }
+            var match = packageOptions.find(function(option) {
+                return option.value.toLocaleLowerCase() === query.toLocaleLowerCase();
+            });
+            if (!match) {
+                packageSearch.setCustomValidity(packageSearch.dataset.invalidMessage);
+                packageSearch.reportValidity();
+                return;
+            }
+            packageId.value = match.dataset.packageid;
+            applyFilters(packageId.value);
+        });
+        packageClear.addEventListener('click', function() {
+            packageSearch.value = '';
+            packageId.value = '0';
+            applyFilters('0');
+        });
     }
 });
 {{/js}}

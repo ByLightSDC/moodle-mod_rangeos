@@ -124,7 +124,9 @@ $string['library_aumappings_desc'] = 'Manage AU-to-scenario mappings across the 
 
 // Library AU mappings.
 $string['library_aumappings'] = 'Library AU Mappings';
-$string['selectpackage'] = 'Select RapidCMI5 Project';
+$string['searchprojects'] = 'Search RapidCMI5 Projects';
+$string['searchprojects_placeholder'] = 'Start typing a project name...';
+$string['searchprojects_invalid'] = 'Select a project from the search suggestions, or clear the field to show all projects.';
 
 // Class mode (config patching).
 $string['classmode'] = 'Class Mode';
