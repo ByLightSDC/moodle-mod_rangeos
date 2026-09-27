@@ -6,13 +6,13 @@
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
 <div data-baseurl="{{baseurl}}">
-    <div class="mb-3">
-        <a href="{{backurl}}" class="btn btn-outline-secondary">
-            &laquo; {{#str}}backtoactivity, local_rangeos{{/str}}
-        </a>
-    </div>
+    <a href="{{backurl}}" class="mod-cmi5-lib-back">
+        <span aria-hidden="true">&larr;</span> {{#str}}backtoactivity, local_rangeos{{/str}}
+    </a>
 
-    {{> local_rangeos/environment_selector }}
+    <div class="rangeos-toolbar">
+        {{> local_rangeos/environment_selector }}
+    </div>
 
     {{#haserror}}
     <div class="alert alert-danger">{{error}}</div>
@@ -39,15 +39,15 @@
                 <td>{{title}}</td>
                 <td>
                     {{#has_mapping}}
-                    <span class="badge badge-success">{{#str}}mapped, local_rangeos{{/str}}</span>
+                    <span class="rangeos-pill rangeos-pill-ok">{{#str}}mapped, local_rangeos{{/str}}</span>
                     {{/has_mapping}}
                     {{^has_mapping}}
-                    <span class="badge badge-warning">{{#str}}unmapped, local_rangeos{{/str}}</span>
+                    <span class="rangeos-pill rangeos-pill-warn">{{#str}}unmapped, local_rangeos{{/str}}</span>
                     {{/has_mapping}}
                 </td>
                 <td>{{scenarios_display}}</td>
                 {{#canmanage}}
-                <td>
+                <td class="rangeos-row-actions">
                     {{#has_mapping}}
                     <button class="btn btn-sm btn-outline-primary"
                             data-action="edit-mapping"

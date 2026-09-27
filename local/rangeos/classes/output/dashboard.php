@@ -84,12 +84,28 @@ class dashboard {
             $area['active'] = $area['key'] === $active;
             $navigation[] = $area;
         }
-        return \html_writer::start_div('rangeos-dashboard') .
+        // The wrapper carries mod_cmi5's .mod-cmi5-library alongside our own class so these
+        // pages inherit its --c5-* token block, exactly as mod_cmi5's upgrades pages do.
+        // See the contract note at the top of styles.css before changing this.
+        return \html_writer::start_div('rangeos-dashboard mod-cmi5-library') .
             $OUTPUT->render_from_template('local_rangeos/dashboard_header', [
                 'description' => get_string($description, 'local_rangeos'),
                 'hasnavigation' => !empty($navigation),
                 'navigation' => $navigation,
             ]);
+    }
+
+    /**
+     * Render a section heading inside the page wrapper.
+     *
+     * Uses mod_cmi5's title component rather than $OUTPUT->heading() so a heading below
+     * the navigation carries the same type as the headings on mod_cmi5's own pages.
+     *
+     * @param string $text Already-escaped heading text.
+     * @return string HTML
+     */
+    public static function heading(string $text): string {
+        return \html_writer::tag('h2', $text, ['class' => 'mod-cmi5-lib-title mb-3']);
     }
 
     /**

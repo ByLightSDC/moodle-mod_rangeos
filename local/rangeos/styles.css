@@ -1,206 +1,762 @@
 /* Management components, aligned with the RapidCMI5 dashboard.
  * Keep every selector under this wrapper so Moodle's other pages are unaffected.
- * Theme variables supply the palette; the remaining tokens define shared spacing and surfaces.
+ *
+ * The palette comes from mod_cmi5, whose styles.css Moodle serves on every page of
+ * the site. The page wrapper (see dashboard::start) carries .mod-cmi5-library for
+ * its --c5-* token block, the same way mod_cmi5's own upgrades pages do, so both
+ * plugins render one palette in both colour schemes. local_rangeos already declares
+ * a hard dependency on mod_cmi5 in version.php, so the tokens are always present;
+ * each one still keeps a theme-derived fallback so a missing block degrades rather
+ * than renders a blank surface.
+ *
+ * Reused from mod_cmi5 so far: the --c5-* tokens, plus the .mod-cmi5-lib-head and
+ * .mod-cmi5-tabs components used by dashboard_header.mustache. Renaming either
+ * there breaks these pages, with no error anywhere - the minimum version is
+ * pinned in version.php.
+ *
+ * The status palette below is copied from mod_cmi5's --st-* values rather than
+ * derived, because its status classes are attached to its own markup: the numbers
+ * must be kept in step by hand.
  */
 .rangeos-dashboard {
-    --rangeos-accent: var(--bs-primary, var(--primary, #2459a6));
-    --rangeos-surface: var(--bs-body-bg, #fff);
-    --rangeos-border: var(--bs-border-color, #dce2e8);
-    --rangeos-muted: var(--bs-secondary-color, #596579);
-    --rangeos-radius: .65rem;
+    --rangeos-ink: var(--c5-ink, var(--bs-body-color, #1b2033));
+    --rangeos-ink-2: var(--c5-ink-2, #505869);
+    --rangeos-accent: var(--c5-accent, var(--bs-primary, var(--primary, #2459a6)));
+    --rangeos-accent-hover: var(--c5-accent-hover, #364a88);
+    --rangeos-accent-tint: var(--c5-accent-tint, color-mix(in srgb, var(--rangeos-accent) 9%, transparent));
+    --rangeos-accent-tint-border: var(--c5-accent-tint-border, #c9d2ee);
+    --rangeos-accent-tint-ink: var(--c5-accent-tint-ink, #2f3f78);
+    --rangeos-on-accent: var(--c5-on-accent, #fff);
+    --rangeos-surface: var(--c5-surface, var(--bs-body-bg, #fff));
+    --rangeos-sunken: var(--c5-sunken, color-mix(in srgb, var(--rangeos-accent) 4%, var(--rangeos-surface)));
+    --rangeos-stage: var(--c5-stage, #f3f4f7);
+    --rangeos-border: var(--c5-line, var(--bs-border-color, #dce2e8));
+    --rangeos-border-soft: var(--c5-line-soft, #edeff3);
+    --rangeos-control-border: var(--c5-control-border, #cdd2dc);
+    --rangeos-muted: var(--c5-ink-3, var(--bs-secondary-color, #596579));
+    --rangeos-faint: var(--c5-ink-faint, #7a8194);
+    --rangeos-danger: var(--c5-danger, #c8413a);
+    --rangeos-danger-tint: var(--c5-danger-tint, #fbeae9);
+    --rangeos-danger-border: var(--c5-danger-tint-border, #eec3c0);
+    --rangeos-danger-ink: var(--c5-danger-tint-ink, #a8261f);
+    --rangeos-banner-bg: var(--c5-update-bg, #f4f6fc);
+    --rangeos-banner-border: var(--c5-update-border, #d5dcf0);
+    --rangeos-banner-icon-bg: var(--c5-update-icon-bg, #e1e7f7);
+    --rangeos-shadow: var(--c5-shadow, 0 1px 2px rgb(27 32 51 / 4%), 0 8px 24px rgb(27 32 51 / 6%));
+    /* cmi5 uses 6px on controls, 12px on banners and 14px on bordered containers. */
+    --rangeos-radius: 6px;
+    --rangeos-radius-banner: 12px;
+    --rangeos-radius-panel: 14px;
     --rangeos-panel-padding: 1.5rem;
+    /* Matches cmi5's row shell: 56px tall, 1.5rem of air at the table's edges. */
+    --rangeos-row-height: 56px;
+    --rangeos-row-gutter: 1.5rem;
+    /* Copied from mod_cmi5's --st-* status palette; see the note above. */
+    --rangeos-ok-ink: #1a6b43;
+    --rangeos-ok-bg: #e6f4ec;
+    --rangeos-warn-ink: #8a5300;
+    --rangeos-warn-bg: #fcf1db;
+    --rangeos-bad-ink: #a8261f;
+    --rangeos-bad-bg: #fbeae9;
+    --rangeos-info-ink: #34539a;
+    --rangeos-info-bg: #e9eef9;
+    --rangeos-quiet-ink: #505869;
+    --rangeos-quiet-bg: #eff1f4;
     max-width: 1440px;
     margin: 0 auto 2rem;
     line-height: 1.55;
+    color: var(--rangeos-ink);
 }
 
-/* Page introduction and navigation. */
-.rangeos-dashboard .rangeos-intro {
-    margin-bottom: 1.5rem;
+[data-bs-theme=dark] .rangeos-dashboard {
+    --rangeos-ok-ink: #7fd1a3;
+    --rangeos-ok-bg: rgb(46 139 87 / 20%);
+    --rangeos-warn-ink: #f0c064;
+    --rangeos-warn-bg: rgb(214 154 31 / 18%);
+    --rangeos-bad-ink: #f6afaa;
+    --rangeos-bad-bg: rgb(200 65 58 / 20%);
+    --rangeos-info-ink: #bac7f8;
+    --rangeos-info-bg: rgb(119 149 248 / 16%);
+    --rangeos-quiet-ink: #cbd0da;
+    --rangeos-quiet-bg: rgb(255 255 255 / 7%);
 }
-.rangeos-dashboard .rangeos-eyebrow {
-    display: inline-block;
-    color: var(--rangeos-accent);
-    font-size: .75rem;
-    font-weight: 700;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    margin-bottom: .4rem;
-}
-.rangeos-dashboard .rangeos-description {
-    color: var(--rangeos-muted);
-    margin: 0;
+
+/* The page introduction and the area navigation are mod_cmi5's head and tab
+ * components (.mod-cmi5-lib-head, .mod-cmi5-tabs); see dashboard_header.mustache.
+ * The description keeps a reading measure the shared component does not set. */
+.rangeos-dashboard .mod-cmi5-lib-desc {
     max-width: 75ch;
+    font-size: .9375rem;
 }
-.rangeos-dashboard .rangeos-navigation {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .35rem;
-    border-bottom: 1px solid var(--rangeos-border);
-    padding-bottom: .75rem;
-    margin-bottom: 1.75rem;
-}
-.rangeos-dashboard .rangeos-nav-link {
-    color: inherit;
-    padding: .6rem .9rem;
-    border-radius: .45rem;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: .9rem;
-}
-.rangeos-dashboard .rangeos-nav-link:hover {
-    background: color-mix(in srgb, var(--rangeos-accent) 7%, transparent);
-    color: var(--rangeos-accent);
-}
-.rangeos-dashboard .rangeos-nav-link.is-active {
-    background: var(--rangeos-accent);
-    color: #fff;
+.rangeos-dashboard .mod-cmi5-lib-head {
+    margin-bottom: 1rem;
 }
 .rangeos-dashboard a:focus-visible,
 .rangeos-dashboard button:focus-visible,
 .rangeos-dashboard select:focus-visible,
 .rangeos-dashboard input:focus-visible {
-    outline: 3px solid var(--rangeos-accent);
-    outline-offset: 3px;
+    outline: 2px solid var(--rangeos-accent);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.rangeos-dashboard code {
+    color: var(--rangeos-ink-2);
+    font-size: .8125rem;
+    overflow-wrap: anywhere;
 }
 
-/* Overview cards. */
+/* Overview cards. One card per management area, so the grid tracks the count
+ * rather than a fixed two columns. */
 .rangeos-dashboard .rangeos-card-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    gap: 1rem;
 }
 .rangeos-dashboard .rangeos-feature-card {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 1.75rem;
+    padding: 1.375rem 1.5rem 1.25rem;
     border: 1px solid var(--rangeos-border);
-    border-radius: .75rem;
+    border-radius: var(--rangeos-radius-panel);
     background: var(--rangeos-surface);
     color: inherit;
     text-decoration: none;
-    box-shadow: 0 2px 5px rgb(0 0 0 / 3%);
+    box-shadow: none;
     transition: border-color .15s ease, box-shadow .15s ease;
 }
-.rangeos-dashboard .rangeos-feature-card:hover {
-    border-color: var(--rangeos-accent);
-    box-shadow: 0 5px 18px rgb(0 0 0 / 7%);
+.rangeos-dashboard .rangeos-feature-card:hover,
+.rangeos-dashboard .rangeos-feature-card:focus {
+    border-color: var(--rangeos-accent-tint-border);
+    box-shadow: var(--rangeos-shadow);
+    color: inherit;
+    text-decoration: none;
 }
 .rangeos-dashboard .rangeos-card-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: var(--rangeos-radius);
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
     color: var(--rangeos-accent);
-    background: color-mix(in srgb, var(--rangeos-accent) 9%, transparent);
-    margin-bottom: 1.25rem;
+    background: var(--rangeos-accent-tint);
 }
 .rangeos-dashboard .rangeos-card-icon .icon {
+    width: 1rem;
+    height: 1rem;
     margin: 0;
+    font-size: 1rem;
 }
 .rangeos-dashboard .rangeos-feature-card h2 {
-    font-weight: 700;
-    margin-bottom: .65rem;
+    margin-bottom: .375rem;
+    color: var(--rangeos-ink);
+    font-size: 1.0625rem;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    line-height: 1.3;
 }
 .rangeos-dashboard .rangeos-card-description {
-    color: var(--rangeos-muted);
     flex: 1;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--rangeos-ink-2);
+    font-size: .875rem;
+    line-height: 1.5;
 }
 .rangeos-dashboard .rangeos-card-link {
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
     color: var(--rangeos-accent);
-    font-size: .9rem;
+    font-size: .8125rem;
+    font-weight: 600;
 }
+/* The arrow leads the eye on hover; the label itself stays put. */
 .rangeos-dashboard .rangeos-card-link span {
-    margin-left: .35rem;
+    transition: transform .15s ease;
+}
+.rangeos-dashboard .rangeos-feature-card:hover .rangeos-card-link span {
+    transform: translateX(3px);
 }
 
-/* Shared filters, forms, and tables. Responsive wrappers contain wide tables. */
+/* Panels. Tables, forms, filters and Bootstrap cards share one container shape. */
 .rangeos-dashboard .rangeos-table-panel,
 .rangeos-dashboard .rangeos-form-panel,
-.rangeos-dashboard .card,
-.rangeos-dashboard .rangeos-filter {
+.rangeos-dashboard .card {
     border: 1px solid var(--rangeos-border);
-    border-radius: var(--rangeos-radius);
+    border-radius: var(--rangeos-radius-panel);
     background: var(--rangeos-surface);
-    box-shadow: 0 2px 5px rgb(0 0 0 / 2%);
     margin-bottom: 1.5rem;
+    box-shadow: none;
 }
 .rangeos-dashboard .rangeos-form-panel {
     padding: var(--rangeos-panel-padding);
 }
-.rangeos-dashboard .rangeos-filter {
-    margin-left: 0;
-    margin-right: 0;
-    padding: 1rem .5rem;
-    align-items: center;
-}
-.rangeos-dashboard .rangeos-filter label {
-    font-weight: 600;
+.rangeos-dashboard .rangeos-table-panel {
+    overflow: hidden;
 }
 .rangeos-dashboard .rangeos-table-panel > .table {
     margin-bottom: 0;
 }
+/* Filters read as a toolbar above the panel they act on, so they sit recessed.
+ * cmi5 stands each control under its own small caption and lines them up along
+ * one baseline (.mod-cmi5-lib-summary-side), rather than running a label and a
+ * field across a Bootstrap form row. */
+.rangeos-dashboard .rangeos-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: .75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    padding: .875rem 1.125rem;
+    border: 1px solid var(--rangeos-border);
+    border-radius: var(--rangeos-radius-panel);
+    background: var(--rangeos-sunken);
+}
+/* A page whose filters are all hidden shouldn't leave an empty bar behind.
+ * :empty alone won't do it: the template leaves whitespace text nodes. */
+.rangeos-dashboard .rangeos-toolbar:empty,
+.rangeos-dashboard .rangeos-toolbar:not(:has(*)) {
+    display: none;
+}
+/* The filter and its two buttons act together, so they wrap together. */
+.rangeos-dashboard .rangeos-toolbar-group {
+    flex: 1 1 26rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: .75rem;
+    min-width: 0;
+    margin: 0;
+}
+.rangeos-dashboard .rangeos-field {
+    display: flex;
+    flex-direction: column;
+    gap: .375rem;
+    min-width: 0;
+}
+.rangeos-dashboard .rangeos-field > label {
+    margin: 0;
+    color: var(--rangeos-ink-2);
+    font-size: .75rem;
+    font-weight: 600;
+}
+.rangeos-dashboard .rangeos-field .form-control,
+.rangeos-dashboard .rangeos-field .custom-select {
+    width: 100%;
+    text-overflow: ellipsis;
+}
+.rangeos-dashboard .rangeos-field-grow {
+    flex: 1 1 16rem;
+}
+.rangeos-dashboard .rangeos-field-env {
+    flex: 0 1 15rem;
+}
+/* The environment governs the whole page rather than filtering the rows, so it
+ * sits away from the filters at the far end of the bar. */
+.rangeos-dashboard .rangeos-toolbar > .rangeos-field-env:not(:only-child) {
+    margin-left: auto;
+}
+.rangeos-dashboard .rangeos-toolbar .btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+}
+.rangeos-dashboard .rangeos-toolbar .btn svg {
+    flex: 0 0 auto;
+}
+.rangeos-dashboard .card-header,
+.rangeos-dashboard .card-footer {
+    padding: .75rem 1.25rem;
+    border-color: var(--rangeos-border-soft);
+    background-color: var(--rangeos-sunken);
+    font-size: .875rem;
+}
+.rangeos-dashboard .card-header {
+    color: var(--rangeos-ink);
+    font-weight: 600;
+}
+/* Nested result tables already sit inside a card. */
+.rangeos-dashboard .card .rangeos-table-panel {
+    border-radius: 10px;
+}
+
+/* Tables use cmi5's row shell: a recessed header strip over 56px rows divided by
+ * the soft line, with the outer columns inset to the panel's gutter. */
+/* Bootstrap paints each cell with --bs-table-bg, which follows the theme's body
+ * background rather than the cmi5 palette - in dark mode that leaves white cells
+ * inside a dark panel. Point its table variables at our own tokens instead, and
+ * let the panel behind supply the surface. */
+.rangeos-dashboard .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--rangeos-ink);
+    --bs-table-accent-bg: transparent;
+    --bs-table-striped-bg: transparent;
+    --bs-table-striped-color: var(--rangeos-ink);
+    --bs-table-hover-bg: transparent;
+    --bs-table-hover-color: var(--rangeos-ink);
+    --bs-table-border-color: var(--rangeos-border-soft);
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--rangeos-ink);
+}
 .rangeos-dashboard .table th {
+    padding: .6875rem 1rem;
     border-top: 0;
     border-bottom: 1px solid var(--rangeos-border);
-    background: color-mix(in srgb, var(--rangeos-accent) 4%, var(--rangeos-surface));
+    background: var(--rangeos-sunken);
     color: var(--rangeos-muted);
-    font-size: .8rem;
-    font-weight: 700;
-    padding: .85rem 1rem;
+    font-size: .75rem;
+    font-weight: 600;
+    text-align: left;
     white-space: nowrap;
+    vertical-align: middle;
 }
 .rangeos-dashboard .table td {
-    padding: 1rem;
+    height: var(--rangeos-row-height);
+    padding: .75rem 1rem;
+    border-top: 1px solid var(--rangeos-border-soft);
+    border-bottom: 0;
     vertical-align: middle;
-    border-color: var(--rangeos-border);
+    font-size: .875rem;
 }
-.rangeos-dashboard .table-striped tbody tr:nth-of-type(odd) {
-    background: transparent;
+.rangeos-dashboard .table thead tr:first-child th,
+.rangeos-dashboard .table tbody tr:first-child td {
+    border-top: 0;
 }
-.rangeos-dashboard .table tbody tr:hover {
-    background: color-mix(in srgb, var(--rangeos-accent) 3%, transparent);
+.rangeos-dashboard .table th:first-child,
+.rangeos-dashboard .table td:first-child {
+    padding-left: var(--rangeos-row-gutter);
 }
-.rangeos-dashboard code {
-    overflow-wrap: anywhere;
+.rangeos-dashboard .table th:last-child,
+.rangeos-dashboard .table td:last-child {
+    padding-right: var(--rangeos-row-gutter);
+}
+/* Striping and hover both tint rows; only the hover carries meaning. Bootstrap
+ * paints both onto the cells with an inset box-shadow rather than the row, so
+ * the stripe has to be cancelled there and the hover drawn there too. */
+.rangeos-dashboard .table > tbody > tr > * {
+    box-shadow: none;
+    transition: background-color .15s ease;
+}
+.rangeos-dashboard .table > tbody > tr:hover > * {
+    background-color: var(--rangeos-sunken);
+}
+.rangeos-dashboard .table-sm td {
+    height: 48px;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+}
+/* Bordered result tables keep the divided-row look of the rest of the page. */
+.rangeos-dashboard .table-bordered,
+.rangeos-dashboard .table-bordered th,
+.rangeos-dashboard .table-bordered td {
+    border-left: 0;
+    border-right: 0;
 }
 .rangeos-dashboard .table code {
     display: inline-block;
     max-width: 26rem;
 }
-.rangeos-dashboard .badge {
-    padding: .4em .6em;
-    line-height: 1.3;
-    white-space: normal;
-    font-weight: 600;
+/* Placeholder dashes and secondary lines inside a row sit a step back from the
+ * row's own muted text. */
+.rangeos-dashboard .table .text-muted {
+    color: var(--rangeos-faint) !important;
 }
-.rangeos-dashboard .btn {
-    border-radius: .4rem;
+.rangeos-dashboard .rangeos-row-actions {
+    white-space: nowrap;
+    text-align: right;
+}
+/* Row actions line up column-wise, as they do on cmi5's own row lists. */
+.rangeos-dashboard .rangeos-row-actions > .btn,
+.rangeos-dashboard .rangeos-row-actions > span > .btn {
+    min-width: 5.25rem;
+    margin: .125rem 0 .125rem .375rem;
+}
+/* Inside a row, a tint would mark every action as the important one. They stay
+ * neutral, leaving the accent to whichever action the row is actually for and
+ * the danger tint to the destructive one. */
+.rangeos-dashboard .rangeos-row-actions .btn-outline-primary,
+.rangeos-dashboard .rangeos-row-actions .btn-outline-info,
+.rangeos-dashboard .rangeos-row-actions .btn-outline-success {
+    border-color: var(--rangeos-control-border);
+    background-color: var(--rangeos-surface);
+    color: var(--rangeos-ink);
+}
+.rangeos-dashboard .rangeos-row-actions .btn-outline-primary:hover,
+.rangeos-dashboard .rangeos-row-actions .btn-outline-info:hover,
+.rangeos-dashboard .rangeos-row-actions .btn-outline-success:hover {
+    border-color: var(--rangeos-muted);
+    background-color: var(--rangeos-sunken);
+    color: var(--rangeos-ink);
+}
+/* An action with only a glyph is square, rather than padded out to the width
+ * the labelled buttons share. */
+.rangeos-dashboard .rangeos-row-actions > .btn.rangeos-icon-btn {
+    width: 30px;
+    min-width: 0;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* Status pills and tags, following cmi5's .mod-cmi5-pill and .mod-cmi5-lib-chip:
+ * a pill carries a state and leads with a dot, a tag only labels. */
+/* A pill is a flex row so the dot can lead; a tag stays inline-block, which is
+ * what lets a long scenario name end in an ellipsis rather than a hard clip. */
+.rangeos-dashboard .rangeos-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background-color: var(--rangeos-quiet-bg);
+    color: var(--rangeos-quiet-ink);
+    font-size: .8125rem;
     font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+.rangeos-dashboard .rangeos-tag,
+.rangeos-dashboard .badge {
+    display: inline-block;
+    max-width: 100%;
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 999px;
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 26px;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rangeos-dashboard .rangeos-pill::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentcolor;
+}
+.rangeos-dashboard .rangeos-pill-ok {
+    background-color: var(--rangeos-ok-bg);
+    color: var(--rangeos-ok-ink);
+}
+.rangeos-dashboard .rangeos-pill-warn {
+    background-color: var(--rangeos-warn-bg);
+    color: var(--rangeos-warn-ink);
+}
+.rangeos-dashboard .rangeos-pill-bad {
+    background-color: var(--rangeos-bad-bg);
+    color: var(--rangeos-bad-ink);
+}
+.rangeos-dashboard .rangeos-pill-info {
+    background-color: var(--rangeos-info-bg);
+    color: var(--rangeos-info-ink);
+}
+/* Tags: a neutral one for counts and formats, an accent one for RangeOS itself. */
+.rangeos-dashboard .rangeos-tag,
+.rangeos-dashboard .badge-secondary {
+    height: 22px;
+    padding: 0 8px;
+    background-color: var(--rangeos-stage);
+    color: var(--rangeos-ink-2);
+    font-size: .75rem;
+    line-height: 22px;
+    font-variant-numeric: tabular-nums;
+}
+.rangeos-dashboard .rangeos-tag-accent,
+.rangeos-dashboard .badge-primary,
+.rangeos-dashboard .badge-info {
+    background-color: var(--rangeos-accent-tint);
+    color: var(--rangeos-accent-tint-ink);
+}
+.rangeos-dashboard .rangeos-tag-empty {
+    border: 1px dashed var(--rangeos-control-border);
+    background: none;
+    color: var(--rangeos-muted);
+}
+/* Anything still using Bootstrap's own variants keeps the same palette. */
+.rangeos-dashboard .badge-success {
+    background-color: var(--rangeos-ok-bg);
+    color: var(--rangeos-ok-ink);
+}
+.rangeos-dashboard .badge-warning {
+    background-color: var(--rangeos-warn-bg);
+    color: var(--rangeos-warn-ink);
+}
+.rangeos-dashboard .badge-danger {
+    background-color: var(--rangeos-bad-bg);
+    color: var(--rangeos-bad-ink);
+}
+/* Scenario names run long, and several stack in one cell. */
+.rangeos-dashboard .rangeos-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+}
+.rangeos-dashboard .rangeos-tag-list .rangeos-tag {
+    max-width: 14rem;
+}
+
+/* Buttons. The theme builds Bootstrap with gradients on, which paints a solid
+ * fill over any background-color set here - a tinted button ends up dark ink on
+ * a dark gradient. cmi5's buttons are flat, so the gradient goes. */
+.rangeos-dashboard .btn {
+    background-image: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .375rem;
+    min-height: 34px;
+    padding: 0 .6875rem;
+    border-radius: var(--rangeos-radius);
+    font-size: .8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 .rangeos-dashboard .btn-sm {
-    font-size: .8rem;
+    min-height: 30px;
+    padding: 0 .625rem;
+    font-size: .75rem;
 }
-.rangeos-dashboard .table .btn {
-    margin: .15rem 0;
+.rangeos-dashboard .btn .icon {
+    margin: 0;
 }
-.rangeos-dashboard .rangeos-empty-state {
-    padding: var(--rangeos-panel-padding);
+/* Every accent action is tinted, the way cmi5 draws a management page's primary
+ * action (.mod-cmi5-btn-tinted). cmi5 saves the solid fill for the learner's
+ * launch button, so no management button is left shouting over the others -
+ * Add environment and Create class read as the same control as Search. The
+ * dialogs keep the solid fill for their confirm button, under .rangeos-modal. */
+.rangeos-dashboard .btn-primary,
+.rangeos-dashboard .btn-success,
+.rangeos-dashboard .btn-outline-primary,
+.rangeos-dashboard .btn-outline-info,
+.rangeos-dashboard .btn-outline-success {
+    border-color: var(--rangeos-accent-tint-border);
+    background-color: var(--rangeos-accent-tint);
+    box-shadow: none;
+    color: var(--rangeos-accent-tint-ink);
+}
+.rangeos-dashboard .btn-primary:hover,
+.rangeos-dashboard .btn-primary:focus,
+.rangeos-dashboard .btn-success:hover,
+.rangeos-dashboard .btn-success:focus,
+.rangeos-dashboard .btn-outline-primary:hover,
+.rangeos-dashboard .btn-outline-primary:focus,
+.rangeos-dashboard .btn-outline-info:hover,
+.rangeos-dashboard .btn-outline-success:hover {
+    border-color: var(--rangeos-accent);
+    background-color: var(--rangeos-accent-tint);
+    color: var(--rangeos-accent-tint-ink);
+}
+.rangeos-dashboard .btn-outline-secondary,
+.rangeos-dashboard .btn-secondary {
+    border-color: var(--rangeos-control-border);
+    background-color: var(--rangeos-surface);
+    color: var(--rangeos-ink);
+}
+.rangeos-dashboard .btn-outline-secondary:hover,
+.rangeos-dashboard .btn-secondary:hover {
+    border-color: var(--rangeos-muted);
+    background-color: var(--rangeos-sunken);
+    color: var(--rangeos-ink);
+}
+.rangeos-dashboard .btn-outline-danger,
+.rangeos-dashboard .btn-danger {
+    border-color: var(--rangeos-danger-border);
+    background-color: var(--rangeos-danger-tint);
+    box-shadow: none;
+    color: var(--rangeos-danger-ink);
+}
+.rangeos-dashboard .btn-outline-danger:hover,
+.rangeos-dashboard .btn-danger:hover {
+    border-color: var(--rangeos-danger);
+    background-color: var(--rangeos-danger-tint);
+    color: var(--rangeos-danger-ink);
+}
+.rangeos-dashboard .btn:disabled,
+.rangeos-dashboard .btn.disabled {
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: .55;
+}
+
+/* Controls mirror cmi5's compact, neutral furniture while remaining Moodle forms. */
+.rangeos-dashboard .form-control,
+.rangeos-dashboard .custom-select {
+    min-height: 36px;
+    border-color: var(--rangeos-control-border);
     border-radius: var(--rangeos-radius);
-    border-style: dashed;
+    background-color: var(--rangeos-surface);
+    color: var(--rangeos-ink);
+    font-size: .875rem;
+}
+.rangeos-dashboard .form-control:hover,
+.rangeos-dashboard .custom-select:hover {
+    border-color: var(--rangeos-muted);
+}
+.rangeos-dashboard .form-control:focus,
+.rangeos-dashboard .custom-select:focus {
+    border-color: var(--rangeos-accent);
+    box-shadow: 0 0 0 2px var(--rangeos-accent-tint);
+}
+.rangeos-dashboard .custom-select-sm {
+    min-height: 30px;
+    min-width: 11rem;
+    font-size: .8125rem;
+}
+.rangeos-dashboard .input-group .btn {
+    min-height: 36px;
+}
+/* The group's own ends are rounded; the joins between its parts are not. */
+.rangeos-dashboard .input-group > .form-control:not(:last-child),
+.rangeos-dashboard .input-group-append > .btn:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.rangeos-dashboard .input-group-append > .btn:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.rangeos-dashboard .custom-control-input:checked ~ .custom-control-label::before {
+    border-color: var(--rangeos-accent);
+    background-color: var(--rangeos-accent);
+}
+.rangeos-dashboard .custom-control-input:focus ~ .custom-control-label::before {
+    box-shadow: 0 0 0 2px var(--rangeos-accent-tint);
+}
+
+/* Banners follow cmi5's update notice: a tinted panel flagged by a colour edge. */
+.rangeos-dashboard .alert {
+    padding: .875rem 1.125rem;
+    border: 1px solid var(--rangeos-banner-border);
+    border-left: 4px solid var(--rangeos-accent);
+    border-radius: var(--rangeos-radius-banner);
+    background-color: var(--rangeos-banner-bg);
+    box-shadow: none;
+    color: var(--rangeos-ink);
+    font-size: .875rem;
+}
+.rangeos-dashboard .alert-danger {
+    border-color: var(--rangeos-danger-border);
+    border-left-color: var(--rangeos-danger);
+    background-color: var(--rangeos-danger-tint);
+    color: var(--rangeos-danger-ink);
+}
+.rangeos-dashboard .alert-warning {
+    border-color: transparent;
+    border-left-color: var(--rangeos-warn-ink);
+    background-color: var(--rangeos-warn-bg);
+    color: var(--rangeos-warn-ink);
+}
+/* An empty area is not news: it states the case quietly, where the rows would be. */
+.rangeos-dashboard .rangeos-empty-state,
+.rangeos-dashboard .alert.rangeos-empty-state {
+    padding: 2.5rem var(--rangeos-panel-padding);
+    border: 1px dashed var(--rangeos-border);
+    border-radius: var(--rangeos-radius-panel);
+    background: var(--rangeos-sunken);
+    color: var(--rangeos-ink-2);
+    font-size: .875rem;
+    text-align: center;
+}
+
+/* Page furniture. */
+.rangeos-dashboard .rangeos-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1rem;
+    margin-bottom: 1.25rem;
+}
+.rangeos-dashboard .rangeos-actions > .text-muted,
+.rangeos-dashboard .rangeos-actions > small {
+    flex: 1 1 20rem;
+    color: var(--rangeos-ink-2);
+    font-size: .8125rem;
+    line-height: 1.5;
+}
+.rangeos-dashboard .rangeos-section-title {
+    margin: 0 0 .75rem;
+    color: var(--rangeos-ink);
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+.rangeos-dashboard .rangeos-result-count {
+    margin: 0 0 .625rem;
+    color: var(--rangeos-muted);
+    font-size: .8125rem;
 }
 .rangeos-dashboard .rangeos-save-status {
     min-height: 1.5rem;
+    color: var(--rangeos-ink-2);
+    font-size: .8125rem;
+}
+.rangeos-dashboard .rangeos-pagination {
+    gap: .75rem;
+}
+.rangeos-dashboard .rangeos-pagination .pagination {
+    margin-bottom: 0;
+}
+.rangeos-dashboard .pagination .page-link {
+    min-width: 32px;
+    padding: 0 .5rem;
+    border-color: var(--rangeos-border);
+    background-color: var(--rangeos-surface);
+    color: var(--rangeos-ink-2);
+    font-size: .8125rem;
+    font-weight: 500;
+    line-height: 32px;
+    text-align: center;
+}
+.rangeos-dashboard .pagination .page-link:hover {
+    border-color: var(--rangeos-muted);
+    background-color: var(--rangeos-sunken);
+    color: var(--rangeos-ink);
+}
+.rangeos-dashboard .pagination .page-item.active .page-link {
+    border-color: var(--rangeos-accent);
+    background-color: var(--rangeos-accent);
+    color: var(--rangeos-on-accent);
+}
+.rangeos-dashboard .pagination .page-item:first-child .page-link {
+    border-top-left-radius: var(--rangeos-radius);
+    border-bottom-left-radius: var(--rangeos-radius);
+}
+.rangeos-dashboard .pagination .page-item:last-child .page-link {
+    border-top-right-radius: var(--rangeos-radius);
+    border-bottom-right-radius: var(--rangeos-radius);
+}
+
+/* Bootstrap's text utilities are used for emphasis inside the result tables;
+ * point them at the status palette so nothing renders in a second set of reds
+ * and greens. */
+.rangeos-dashboard .text-muted {
+    color: var(--rangeos-muted) !important;
+}
+.rangeos-dashboard .text-success {
+    color: var(--rangeos-ok-ink) !important;
+}
+.rangeos-dashboard .text-danger {
+    color: var(--rangeos-bad-ink) !important;
+}
+/* Group labels above the result tables. */
+.rangeos-dashboard .text-uppercase {
+    letter-spacing: .04em;
+    font-size: .6875rem;
 }
 
 @media (max-width: 767px) {
     .rangeos-dashboard {
         --rangeos-panel-padding: 1.1rem;
+        --rangeos-row-gutter: 1rem;
     }
     .rangeos-dashboard .rangeos-card-grid {
         grid-template-columns: 1fr;
@@ -208,22 +764,243 @@
     .rangeos-dashboard .rangeos-feature-card {
         padding: var(--rangeos-panel-padding);
     }
-    .rangeos-dashboard .rangeos-nav-link {
-        padding: .5rem .65rem;
-    }
     .rangeos-dashboard .table td {
-        padding: .8rem;
+        padding: .75rem;
+    }
+    .rangeos-dashboard .rangeos-toolbar {
+        padding: 1rem;
+    }
+    /* Stacked, every control takes the full width and the environment keeps its
+     * place in the order rather than being pushed to an end that no longer exists. */
+    .rangeos-dashboard .rangeos-field,
+    .rangeos-dashboard .rangeos-toolbar > .rangeos-field-env:not(:only-child) {
+        flex: 1 1 100%;
+        margin-left: 0;
+    }
+    .rangeos-dashboard .rangeos-toolbar .btn {
+        flex: 1 1 auto;
+    }
+    .rangeos-dashboard .rangeos-empty-state,
+    .rangeos-dashboard .alert.rangeos-empty-state {
+        padding: 2rem var(--rangeos-panel-padding);
     }
 }
+
 @media (prefers-reduced-motion: reduce) {
-    .rangeos-dashboard .rangeos-feature-card {
+    .rangeos-dashboard .rangeos-feature-card,
+    .rangeos-dashboard .rangeos-card-link span,
+    .rangeos-dashboard .table > tbody > tr > *,
+    .rangeos-dashboard .btn {
         transition: none;
     }
 }
 
-.rangeos-dashboard .rangeos-pagination {
-    gap: .75rem;
+/* Dynamic dialogs sit outside the dashboard wrapper, so they carry the same token
+ * values in a RangeOS-owned scope rather than borrowing cmi5 component rules. */
+.rangeos-modal {
+    --rangeos-modal-ink: #1b2033;
+    --rangeos-modal-ink-2: #505869;
+    --rangeos-modal-line: #e3e6ec;
+    --rangeos-modal-line-soft: #edeff3;
+    --rangeos-modal-control: #cdd2dc;
+    --rangeos-modal-surface: #fff;
+    --rangeos-modal-sunken: #f8f9fb;
+    --rangeos-modal-stage: #f3f4f7;
+    --rangeos-modal-accent: #43589d;
+    --rangeos-modal-accent-hover: #364a88;
+    --rangeos-modal-accent-tint: #e9edf8;
+    --rangeos-modal-accent-border: #c9d2ee;
+    --rangeos-modal-accent-ink: #2f3f78;
+    --rangeos-modal-on-accent: #fff;
+    --rangeos-modal-shadow: 0 1px 2px rgb(27 32 51 / 4%), 0 8px 24px rgb(27 32 51 / 12%);
 }
-.rangeos-dashboard .rangeos-pagination .pagination {
-    margin-bottom: 0;
+[data-bs-theme=dark] .rangeos-modal {
+    --rangeos-modal-ink: #e6e8ee;
+    --rangeos-modal-ink-2: #b4bac7;
+    --rangeos-modal-line: #353b4a;
+    --rangeos-modal-line-soft: #2c3140;
+    --rangeos-modal-control: #474e60;
+    --rangeos-modal-surface: #1e222b;
+    --rangeos-modal-sunken: #191c24;
+    --rangeos-modal-stage: #262b36;
+    --rangeos-modal-accent: #7795f8;
+    --rangeos-modal-accent-hover: #93aafa;
+    --rangeos-modal-accent-tint: rgb(119 149 248 / 14%);
+    --rangeos-modal-accent-border: rgb(119 149 248 / 38%);
+    --rangeos-modal-accent-ink: #c3cffd;
+    --rangeos-modal-on-accent: #0e1530;
+    --rangeos-modal-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+.rangeos-modal .modal-content {
+    overflow: hidden;
+    border: 1px solid var(--rangeos-modal-line);
+    border-radius: 14px;
+    background-color: var(--rangeos-modal-surface);
+    color: var(--rangeos-modal-ink);
+    box-shadow: var(--rangeos-modal-shadow);
+}
+.rangeos-modal .modal-header,
+.rangeos-modal .modal-footer {
+    padding: 1rem 1.25rem;
+    border-color: var(--rangeos-modal-line-soft);
+    background-color: var(--rangeos-modal-sunken);
+}
+.rangeos-modal .modal-title {
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+.rangeos-modal .modal-body {
+    padding: 1.25rem;
+    font-size: .875rem;
+}
+.rangeos-modal label {
+    font-size: .8125rem;
+    font-weight: 600;
+}
+.rangeos-modal .form-control,
+.rangeos-modal .custom-select {
+    min-height: 36px;
+    border-color: var(--rangeos-modal-control);
+    border-radius: 6px;
+    background-color: var(--rangeos-modal-surface);
+    color: var(--rangeos-modal-ink);
+    font-size: .875rem;
+}
+.rangeos-modal .form-control:hover,
+.rangeos-modal .custom-select:hover {
+    border-color: var(--rangeos-modal-ink-2);
+}
+.rangeos-modal .form-control:focus,
+.rangeos-modal .custom-select:focus {
+    border-color: var(--rangeos-modal-accent);
+    box-shadow: 0 0 0 2px var(--rangeos-modal-accent-tint);
+}
+.rangeos-modal .btn {
+    background-image: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .375rem;
+    min-height: 34px;
+    padding: 0 .6875rem;
+    border-radius: 6px;
+    font-size: .8125rem;
+    font-weight: 500;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.rangeos-modal .btn:focus-visible {
+    outline: 2px solid var(--rangeos-modal-accent);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.rangeos-modal .btn-primary,
+.rangeos-modal .btn-success {
+    border-color: var(--rangeos-modal-accent);
+    background-color: var(--rangeos-modal-accent);
+    box-shadow: 0 1px 2px rgb(16 24 40 / 8%);
+    color: var(--rangeos-modal-on-accent);
+}
+.rangeos-modal .btn-primary:hover,
+.rangeos-modal .btn-success:hover {
+    border-color: var(--rangeos-modal-accent-hover);
+    background-color: var(--rangeos-modal-accent-hover);
+    color: var(--rangeos-modal-on-accent);
+}
+.rangeos-modal .btn-secondary,
+.rangeos-modal .btn-outline-secondary {
+    border-color: var(--rangeos-modal-control);
+    background-color: var(--rangeos-modal-surface);
+    color: var(--rangeos-modal-ink-2);
+}
+.rangeos-modal .btn-secondary:hover,
+.rangeos-modal .btn-outline-secondary:hover {
+    background-color: var(--rangeos-modal-sunken);
+    color: var(--rangeos-modal-ink);
+}
+.rangeos-modal .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background-color: var(--rangeos-modal-stage);
+    color: var(--rangeos-modal-ink-2);
+    font-size: .75rem;
+    font-weight: 600;
+}
+/* The scenarios already chosen in the mapping dialog: a tag that carries its own
+ * remove control, so the geometry is set here rather than left to .badge. */
+.rangeos-modal .rangeos-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .375rem;
+}
+.rangeos-modal .rangeos-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    max-width: 100%;
+    min-height: 26px;
+    padding: 0 .25rem 0 .625rem;
+    border: 1px solid var(--rangeos-modal-accent-border);
+    border-radius: 999px;
+    background-color: var(--rangeos-modal-accent-tint);
+    color: var(--rangeos-modal-accent-ink);
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.rangeos-modal .rangeos-chip-remove {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    opacity: .7;
+    cursor: pointer;
+}
+.rangeos-modal .rangeos-chip-remove:hover,
+.rangeos-modal .rangeos-chip-remove:focus {
+    background-color: var(--rangeos-modal-accent-border);
+    opacity: 1;
+}
+.rangeos-modal .rangeos-chip-remove:focus-visible {
+    outline: 2px solid var(--rangeos-modal-accent);
+    outline-offset: 1px;
+}
+.rangeos-modal .list-group {
+    overflow: hidden;
+    border: 1px solid var(--rangeos-modal-line);
+    border-radius: 10px;
+}
+.rangeos-modal .list-group-item {
+    padding: .75rem 1rem;
+    border: 0;
+    border-top: 1px solid var(--rangeos-modal-line-soft);
+    background-color: var(--rangeos-modal-surface);
+    color: var(--rangeos-modal-ink);
+}
+.rangeos-modal .list-group-item:first-child {
+    border-top: 0;
+}
+.rangeos-modal .list-group-item:hover {
+    background-color: var(--rangeos-modal-sunken);
+}
+.rangeos-modal .list-group-item.active {
+    border-color: var(--rangeos-modal-accent-border);
+    background-color: var(--rangeos-modal-accent-tint);
+    color: var(--rangeos-modal-accent-ink);
+}
+.rangeos-modal code {
+    color: var(--rangeos-modal-ink-2);
+    font-size: .8125rem;
 }

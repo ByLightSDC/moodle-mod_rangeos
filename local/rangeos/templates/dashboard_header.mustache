@@ -1,15 +1,29 @@
 {{!
     @template local_rangeos/dashboard_header
     Shared introduction and capability-aware management navigation.
+
+    Built from mod_cmi5's head and tab components (.mod-cmi5-lib-head, .mod-cmi5-tabs)
+    so these pages read as the same product. The page title is not repeated here: the
+    theme already renders it from $PAGE->set_heading(), above this wrapper.
+
+    Context variables required:
+    * description - the introduction copy for the current area
+    * hasnavigation - the user holds a capability for at least one area
+    * navigation - the area links; each has url, title, active
 }}
-<div class="rangeos-intro">
-    <span class="rangeos-eyebrow">RangeOS</span>
-    <p class="rangeos-description">{{description}}</p>
+<div class="mod-cmi5-lib-head">
+    <div class="mod-cmi5-lib-head-text">
+        <p class="mod-cmi5-lib-desc">{{description}}</p>
+    </div>
 </div>
 {{#hasnavigation}}
-<nav class="rangeos-navigation" aria-label="{{#str}}dashboardnavigation, local_rangeos{{/str}}">
-    {{#navigation}}
-    <a class="rangeos-nav-link{{#active}} is-active{{/active}}" href="{{url}}"{{#active}} aria-current="page"{{/active}}>{{title}}</a>
-    {{/navigation}}
+<nav aria-label="{{#str}}dashboardnavigation, local_rangeos{{/str}}">
+    <ul class="mod-cmi5-tabs">
+        {{#navigation}}
+        <li class="mod-cmi5-tab{{#active}} is-active{{/active}}">
+            <a class="mod-cmi5-tab-link" href="{{url}}"{{#active}} aria-current="page"{{/active}}>{{title}}</a>
+        </li>
+        {{/navigation}}
+    </ul>
 </nav>
 {{/hasnavigation}}

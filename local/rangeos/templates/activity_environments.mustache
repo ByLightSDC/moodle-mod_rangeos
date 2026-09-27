@@ -16,11 +16,9 @@
     {{#hasenvironments}}
 
     {{#hascourses}}
-    <div class="form-group row rangeos-filter">
-        <label for="rangeos-course-filter" class="col-auto col-form-label font-weight-bold">
-            {{#str}}filterbycourse, local_rangeos{{/str}}
-        </label>
-        <div class="col-sm-4">
+    <div class="rangeos-toolbar">
+        <div class="rangeos-field rangeos-field-grow">
+            <label for="rangeos-course-filter">{{#str}}filterbycourse, local_rangeos{{/str}}</label>
             <select id="rangeos-course-filter" class="custom-select" data-action="filter-course">
                 {{#courseoptions}}
                 <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
@@ -54,17 +52,17 @@
                 <td>
                     <select class="custom-select custom-select-sm"
                             data-action="assign-environment"
-                            data-cmi5id="{{cmi5id}}"
-                            style="min-width:180px;">
+                            data-cmi5id="{{cmi5id}}">
                         {{#envoptions}}
                         <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
                         {{/envoptions}}
                     </select>
                     <span class="rangeos-save-indicator ml-2" style="display:none;"></span>
                 </td>
-                <td>
-                    <a href="{{settingsurl}}" class="btn btn-sm btn-outline-secondary" title="{{#str}}settings{{/str}}">
-                        &#9881;
+                <td class="rangeos-row-actions">
+                    <a href="{{settingsurl}}" class="btn btn-sm btn-outline-secondary rangeos-icon-btn"
+                       title="{{#str}}settings{{/str}}" aria-label="{{#str}}settings{{/str}}">
+                        <span aria-hidden="true">&#9881;</span>
                     </a>
                 </td>
             </tr>
