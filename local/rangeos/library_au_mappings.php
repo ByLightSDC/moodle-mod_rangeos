@@ -87,7 +87,7 @@ $_perf = static function (string $label, float $start, string $context = '') use
     $_addperf($label, (microtime(true) - $start) * 1000, $context);
 };
 
-// Load packages list for the filter selector.
+// Load package names for the project search suggestions.
 $_t = microtime(true);
 $packages = $DB->get_records('cmi5_packages', [], 'title ASC', 'id, title, latestversion');
 $_perf('DB: load packages list', $_t, count($packages) . ' packages');
@@ -183,7 +183,6 @@ foreach ($packages as $pkg) {
     $packageoptions[] = [
         'id' => $pkg->id,
         'title' => format_string($pkg->title),
-        'selected' => ($pkg->id == $packageid),
     ];
 }
 
