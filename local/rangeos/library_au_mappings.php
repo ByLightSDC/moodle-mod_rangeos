@@ -263,15 +263,6 @@ foreach ($aus as $au) {
         $israngeos = true;
     }
 
-    // Get the first scenario UUID for class creation.
-    $firstscenariouuid = '';
-    foreach ($scenarios as $s) {
-        $firstscenariouuid = is_array($s) ? ($s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '') : (string) $s;
-        if ($firstscenariouuid) {
-            break;
-        }
-    }
-
     // Find matching local cmi5 activities.
     $activities = [];
     if (isset($aulookup[$au->auid])) {
@@ -307,7 +298,6 @@ foreach ($aus as $au) {
         'mapping_name' => $mapping['name'] ?? '',
         'classmode' => $classmode,
         'defaultclassid' => $defaultclassid,
-        'firstscenariouuid' => $firstscenariouuid,
         'activities' => $activities,
         'hasactivities' => !empty($activities),
         'packagetitle' => format_string($au->packagetitle),
