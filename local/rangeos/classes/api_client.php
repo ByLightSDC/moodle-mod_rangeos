@@ -33,6 +33,12 @@ require_once($CFG->libdir . '/filelib.php');
  */
 class api_client {
 
+    /** @var int Maximum number of simultaneous AU mapping requests. */
+    public const MAPPING_CONCURRENCY = 5;
+
+    /** @var int Environment record ID, used to scope cached API data. */
+    private int $environmentid;
+
     /** @var string Base URL of the devops-api. */
     private string $baseurl;
 
@@ -51,12 +57,19 @@ class api_client {
     /** @var int Token expiry timestamp. */
     private int $tokenexpiry = 0;
 
+    /** @var array Timing and cache statistics for the latest bulk mapping read. */
+    private array $lastmappingreadstats = [];
+
+    /** @var array|null Memoised CURLOPT_RESOLVE entries for the AU mapping endpoint. */
+    private ?array $mappingresolveinfo = null;
+
     /**
      * Constructor.
      *
      * @param \stdClass $environment Environment record from local_rangeos_environments.
      */
     public function __construct(\stdClass $environment) {
+        $this->environmentid = (int) ($environment->id ?? 0);
         $this->baseurl = rtrim($environment->apibaseurl, '/');
         $this->tokenurl = $environment->auth_token_url;
         $this->clientid = $environment->auth_client_id;
@@ -152,6 +165,106 @@ class api_client {
     }
 
     /**
+     * Get mappings for several AU IDs, using a short-lived cache and bounded concurrency.
+     *
+     * Both found and missing mappings are cached. Results are keyed by AU ID and retain
+     * null values for AUs which do not have a mapping.
+     *
+     * @param string[] $auids AU IRIs to look up.
+     * @param int $concurrency Simultaneous requests, clamped to 1..self::MAPPING_CONCURRENCY.
+     * @return array<string, array|null> Mappings keyed by AU IRI.
+     */
+    public function get_au_mappings_by_ids(array $auids, int $concurrency = self::MAPPING_CONCURRENCY): array {
+        $started = microtime(true);
+        $auids = array_values(array_unique(array_filter($auids, static function ($auid): bool {
+            return is_string($auid) && $auid !== '';
+        })));
+        $this->lastmappingreadstats = [
+            'requested' => count($auids),
+            'cachehits' => 0,
+            'cachemisses' => 0,
+            'waves' => 0,
+            'authms' => 0.0,
+            'httpms' => 0.0,
+            'totalms' => 0.0,
+        ];
+        if (empty($auids)) {
+            return [];
+        }
+
+        $concurrency = max(1, min(self::MAPPING_CONCURRENCY, $concurrency));
+        $cache = \cache::make('local_rangeos', 'aumappings');
+        $results = [];
+        $misses = [];
+
+        foreach ($auids as $auid) {
+            $cached = $cache->get($this->au_mapping_cache_key($auid));
+            if (is_array($cached) && array_key_exists('mapping', $cached)) {
+                $results[$auid] = $cached['mapping'];
+                $this->lastmappingreadstats['cachehits']++;
+            } else {
+                $misses[] = $auid;
+                $this->lastmappingreadstats['cachemisses']++;
+            }
+        }
+
+        if (!empty($misses)) {
+            $authstarted = microtime(true);
+            $this->authenticate();
+            $this->lastmappingreadstats['authms'] += (microtime(true) - $authstarted) * 1000;
+            foreach (array_chunk($misses, $concurrency) as $chunk) {
+                $wavestarted = microtime(true);
+                $responses = $this->do_parallel_au_mapping_requests($chunk);
+                $this->lastmappingreadstats['waves']++;
+                $this->lastmappingreadstats['httpms'] += (microtime(true) - $wavestarted) * 1000;
+
+                // A token can expire between authentication and use. Refresh once and retry
+                // only the affected requests, matching the single-request behaviour.
+                $unauthorised = [];
+                foreach ($responses as $auid => $response) {
+                    if ($response['httpcode'] === 401) {
+                        $unauthorised[] = $auid;
+                    }
+                }
+                if (!empty($unauthorised)) {
+                    $this->accesstoken = null;
+                    $this->tokenexpiry = 0;
+                    $authstarted = microtime(true);
+                    $this->authenticate(true);
+                    $this->lastmappingreadstats['authms'] += (microtime(true) - $authstarted) * 1000;
+                    $wavestarted = microtime(true);
+                    $responses = array_replace($responses, $this->do_parallel_au_mapping_requests($unauthorised));
+                    $this->lastmappingreadstats['waves']++;
+                    $this->lastmappingreadstats['httpms'] += (microtime(true) - $wavestarted) * 1000;
+                }
+
+                foreach ($responses as $auid => $response) {
+                    $mapping = $this->decode_au_mapping_response($response);
+                    $results[$auid] = $mapping;
+                    $cache->set($this->au_mapping_cache_key($auid), ['mapping' => $mapping]);
+                }
+            }
+        }
+
+        // Restore the caller's order regardless of which values came from cache.
+        $ordered = [];
+        foreach ($auids as $auid) {
+            $ordered[$auid] = $results[$auid] ?? null;
+        }
+        $this->lastmappingreadstats['totalms'] = (microtime(true) - $started) * 1000;
+        return $ordered;
+    }
+
+    /**
+     * Get statistics for the latest get_au_mappings_by_ids() call.
+     *
+     * @return array Timing and cache counters.
+     */
+    public function get_last_mapping_read_stats(): array {
+        return $this->lastmappingreadstats;
+    }
+
+    /**
      * Create an AU mapping.
      *
      * @param string $auid AU IRI.
@@ -160,11 +273,13 @@ class api_client {
      * @return array Decoded response.
      */
     public function create_au_mapping(string $auid, string $name, array $scenarios): array {
-        return $this->post('/v1/cmi5/auMapping', [
+        $result = $this->post('/v1/cmi5/auMapping', [
             'auId' => $auid,
             'name' => $name,
             'scenarios' => $scenarios,
         ]);
+        $this->invalidate_au_mapping_cache($auid);
+        return $result;
     }
 
     /**
@@ -175,7 +290,9 @@ class api_client {
      * @return array Decoded response.
      */
     public function update_au_mapping(string $auid, array $data): array {
-        return $this->put('/v1/cmi5/auMapping/' . urlencode($auid), $data);
+        $result = $this->put('/v1/cmi5/auMapping/' . urlencode($auid), $data);
+        $this->invalidate_au_mapping_cache($auid);
+        return $result;
     }
 
     /**
@@ -186,6 +303,128 @@ class api_client {
      */
     public function delete_au_mapping(string $auid): void {
         $this->delete('/v1/cmi5/auMapping/' . urlencode($auid));
+        $this->invalidate_au_mapping_cache($auid);
+    }
+
+    /**
+     * Fetch one wave of AU mappings concurrently.
+     *
+     * The environment URL is administrator-managed. Proxy settings and Moodle's CA bundle
+     * are carried across because native curl_multi cannot use Moodle's synchronous wrapper.
+     *
+     * @param string[] $auids AU IRIs. The caller enforces the concurrency cap.
+     * @return array<string, array{httpcode: int, body: string, error: string}>
+     */
+    protected function do_parallel_au_mapping_requests(array $auids): array {
+        global $CFG;
+
+        $basepath = $this->baseurl . '/v1/cmi5/auMapping/';
+        if ($this->mappingresolveinfo === null) {
+            $this->mappingresolveinfo = (new parallel_curl_security())->validate($basepath);
+        }
+        $resolveinfo = $this->mappingresolveinfo;
+        $multihandle = curl_multi_init();
+        $handles = [];
+        foreach ($auids as $auid) {
+            $url = $basepath . urlencode($auid);
+            $handle = curl_init($url);
+            $options = [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_CONNECTTIMEOUT => 30,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_ENCODING => '',
+                CURLOPT_USERAGENT => \core_useragent::get_moodlebot_useragent(),
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $this->accesstoken,
+                    'Accept: application/json',
+                ],
+            ];
+            if (!empty($resolveinfo)) {
+                $options[CURLOPT_RESOLVE] = $resolveinfo;
+            }
+            if (defined('CURLOPT_PROTOCOLS')) {
+                $options[CURLOPT_PROTOCOLS] = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+            }
+            $cacert = \curl::get_cacert();
+            if ($cacert) {
+                $options[CURLOPT_CAINFO] = $cacert;
+            }
+            if (!empty($CFG->proxyhost) && !is_proxybypass($url)) {
+                $options[CURLOPT_PROXY] = $CFG->proxyhost
+                    . (!empty($CFG->proxyport) ? ':' . $CFG->proxyport : '');
+                if (!empty($CFG->proxyuser) && !empty($CFG->proxypassword)) {
+                    $options[CURLOPT_PROXYUSERPWD] = $CFG->proxyuser . ':' . $CFG->proxypassword;
+                    $options[CURLOPT_PROXYAUTH] = CURLAUTH_BASIC | CURLAUTH_NTLM;
+                }
+                $options[CURLOPT_PROXYTYPE] = ($CFG->proxytype ?? '') === 'SOCKS5'
+                    ? CURLPROXY_SOCKS5 : CURLPROXY_HTTP;
+            }
+            curl_setopt_array($handle, $options);
+            curl_multi_add_handle($multihandle, $handle);
+            $handles[$auid] = $handle;
+        }
+
+        do {
+            $status = curl_multi_exec($multihandle, $running);
+            if ($running && $status === CURLM_OK && curl_multi_select($multihandle, 1.0) === -1) {
+                usleep(1000);
+            }
+        } while ($running && $status === CURLM_OK);
+
+        $responses = [];
+        foreach ($handles as $auid => $handle) {
+            $responses[$auid] = [
+                'httpcode' => (int) curl_getinfo($handle, CURLINFO_HTTP_CODE),
+                'body' => (string) curl_multi_getcontent($handle),
+                'error' => curl_error($handle),
+            ];
+            curl_multi_remove_handle($multihandle, $handle);
+            curl_close($handle);
+        }
+        curl_multi_close($multihandle);
+        return $responses;
+    }
+
+    /**
+     * Decode one concurrent AU mapping response.
+     *
+     * @param array{httpcode: int, body: string, error: string} $response Raw response.
+     * @return array|null Mapping, or null for a missing mapping.
+     */
+    private function decode_au_mapping_response(array $response): ?array {
+        if ($response['httpcode'] === 404) {
+            return null;
+        }
+        if ($response['httpcode'] === 0 || $response['error'] !== '') {
+            throw new \moodle_exception(
+                'error:apiconnection',
+                'local_rangeos',
+                '',
+                $response['error'] ?: 'No HTTP response'
+            );
+        }
+        if ($response['httpcode'] >= 400) {
+            throw new \moodle_exception('error:apiconnection', 'local_rangeos',
+                '', "HTTP {$response['httpcode']}: {$response['body']}");
+        }
+        $decoded = json_decode($response['body'], true);
+        if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+            throw new \moodle_exception('error:apiconnection', 'local_rangeos', '', 'Invalid JSON response');
+        }
+        return $decoded ?? [];
+    }
+
+    /** Build a cache key scoped to this environment. */
+    private function au_mapping_cache_key(string $auid): string {
+        return 'env' . $this->environmentid . '_' . sha1($auid);
+    }
+
+    /** Remove a mapping after a successful write so the UI refreshes immediately. */
+    private function invalidate_au_mapping_cache(string $auid): void {
+        \cache::make('local_rangeos', 'aumappings')->delete($this->au_mapping_cache_key($auid));
     }
 
     /**

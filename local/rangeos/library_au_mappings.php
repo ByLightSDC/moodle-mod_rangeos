@@ -24,6 +24,8 @@
 
 require_once(__DIR__ . '/../../config.php');
 
+$_requeststart = microtime(true);
+
 use local_rangeos\environment_manager;
 use local_rangeos\content_patcher;
 
@@ -35,7 +37,6 @@ require_capability('local/rangeos:manageaumappings', $context);
 $packageid = optional_param('packageid', 0, PARAM_INT);
 $envid = optional_param('envid', 0, PARAM_INT);
 $currentpage = optional_param('page', 0, PARAM_INT);
-$pagesize = optional_param('perpage', 20, PARAM_INT);
 
 // Handle bulk map-all-defaults action.
 $mapresults = null;
@@ -75,13 +76,16 @@ if ($envid === 0) {
 
 global $DB;
 
-$_perf_start = microtime(true);
-$_perf = debugging('', DEBUG_NORMAL)
-    ? static function (string $label, float $start, string $context = ''): void {
-        $ms = round((microtime(true) - $start) * 1000, 1);
+$_perfdata = [];
+$_addperf = static function (string $label, float $ms, string $context = '') use (&$_perfdata): void {
+    $_perfdata[] = ['label' => $label, 'ms' => $ms, 'context' => $context];
+    if (debugging('', DEBUG_NORMAL)) {
         error_log(sprintf('[rangeos_perf] %-55s %7.1fms%s', $label, $ms, $context ? "  ($context)" : ''));
     }
-    : static function (string $_label, float $_start, string $_context = ''): void {};
+};
+$_perf = static function (string $label, float $start, string $context = '') use ($_addperf): void {
+    $_addperf($label, (microtime(true) - $start) * 1000, $context);
+};
 
 // Load packages list for the filter selector.
 $_t = microtime(true);
@@ -89,7 +93,9 @@ $packages = $DB->get_records('cmi5_packages', [], 'title ASC', 'id, title, lates
 $_perf('DB: load packages list', $_t, count($packages) . ' packages');
 
 // The local library owns both the row count and pagination. Remote mappings only enrich these rows.
-$librarypage = \local_rangeos\library_au_listing::get_page($packageid, $currentpage, $pagesize);
+$_t = microtime(true);
+$librarypage = \local_rangeos\library_au_listing::get_page($packageid, $currentpage);
+$_perf('DB: library AU page', $_t, $librarypage['total'] . ' total, ' . count($librarypage['aus']) . ' rows');
 $aus = $librarypage['aus'];
 $totalitems = $librarypage['total'];
 $currentpage = $librarypage['page'];
@@ -108,13 +114,10 @@ $error = '';
 if ($envid > 0 && $aus) {
     try {
         $client = \local_rangeos\api_client::from_environment($envid);
-        // Look up only this page's AUs. Do not truncate mappings at a remote list-page boundary.
-        foreach ($aus as $au) {
-            if (array_key_exists($au->auid, $aumappings)) {
-                continue;
-            }
-            $mapping = $client->get_au_mapping($au->auid);
-            $aumappings[$au->auid] = $mapping;
+        // Resolve this page's mappings from the short-lived cache, fetching misses concurrently.
+        $_t = microtime(true);
+        $aumappings = $client->get_au_mappings_by_ids(array_column($aus, 'auid'));
+        foreach ($aumappings as $mapping) {
             foreach ($mapping['scenarios'] ?? [] as $scenario) {
                 $uuid = is_array($scenario)
                     ? ($scenario['uuid'] ?? $scenario['scenarioId'] ?? $scenario['id'] ?? '')
@@ -124,6 +127,15 @@ if ($envid > 0 && $aus) {
                 }
             }
         }
+        $mappingstats = $client->get_last_mapping_read_stats();
+        $_perf('API/cache: get AU mappings', $_t, sprintf(
+            '%d hits, %d misses, %d HTTP waves; auth %.1fms, HTTP %.1fms',
+            $mappingstats['cachehits'],
+            $mappingstats['cachemisses'],
+            $mappingstats['waves'],
+            $mappingstats['authms'],
+            $mappingstats['httpms']
+        ));
 
         // Fetch all scenarios in one call — 'limit' is the correct param name for this API.
         $scenariobynamelookup = []; // name => uuid
@@ -141,7 +153,11 @@ if ($envid > 0 && $aus) {
                     $scenariobynamelookup[$name] = $uuid;
                 }
             }
-            $_perf('API: list_content_scenarios', $_t, count($scenarioresponse['data'] ?? []) . ' items, ' . count($scenariolookup) . ' resolved');
+            $_perf(
+                'API: list_content_scenarios',
+                $_t,
+                count($scenarioresponse['data'] ?? []) . ' items, ' . count($scenariolookup) . ' resolved'
+            );
         }
     } catch (\Exception $e) {
         $error = $e->getMessage();
@@ -174,6 +190,7 @@ foreach ($packages as $pkg) {
 $aulookup = []; // auid => [{activityname, coursename, cmid}]
 $allauids = array_values(array_unique(array_column($aus, 'auid')));
 if (!empty($allauids)) {
+    $_t = microtime(true);
     list($insql, $inparams) = $DB->get_in_or_equal($allauids, SQL_PARAMS_NAMED);
     $sql = "SELECT ca.id, ca.auid, ca.title AS autitle, c5.id AS cmi5id, c5.name AS activityname,
                    co.id AS courseid, co.fullname AS coursename, cm.id AS cmid
@@ -196,9 +213,12 @@ if (!empty($allauids)) {
             'cmid' => $rec->cmid,
         ];
     }
+    $_perf('DB: AU activity lookup', $_t, count($records) . ' activity rows');
 }
 
 // Cache config files per version, including when browsing all library packages.
+$configms = 0.0;
+$configcount = 0;
 $configsbyversion = [];
 $audata = [];
 foreach ($aus as $au) {
@@ -220,7 +240,10 @@ foreach ($aus as $au) {
     $auversionid = (int) $au->versionid;
     if (!empty($auversionid) && !empty($au->url)) {
         if (!array_key_exists($auversionid, $configsbyversion)) {
+            $_configstart = microtime(true);
             $configsbyversion[$auversionid] = content_patcher::get_all_au_configs($auversionid);
+            $configms += (microtime(true) - $_configstart) * 1000;
+            $configcount += count($configsbyversion[$auversionid]);
         }
         $config = $configsbyversion[$auversionid][content_patcher::au_url_to_filepath($au->url)] ?? null;
         if ($config !== null && !empty($config['rangeosScenarioUUID'])) {
@@ -287,17 +310,20 @@ foreach ($aus as $au) {
         'haspackageinfo' => true,
     ];
 }
+$_addperf(
+    'Files: load AU config.json',
+    $configms,
+    count($configsbyversion) . ' versions, ' . $configcount . ' configs'
+);
 
 // Preserve the library filters when the shared AMD handler changes the environment.
 $baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php', [
     'packageid' => $packageid,
-    'perpage' => $pagesize,
 ]))->out(false);
 
 $pagingurl = new moodle_url('/local/rangeos/library_au_mappings.php', [
     'envid'     => $envid,
     'packageid' => $packageid,
-    'perpage'   => $pagesize,
 ]);
 
 echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
@@ -333,24 +359,47 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
     'globalmappingsurl' => (new moodle_url('/local/rangeos/au_mappings.php', ['envid' => $envid]))->out(false),
 ]);
 
-$perpageselect = html_writer::tag(
-    'label',
-    get_string('perpage', 'moodle') . ':',
-    ['for' => 'rangeos-perpage-select', 'class' => 'mr-2 mb-0 small text-muted']
-);
-$perpageselect .= html_writer::select(
-    [20 => '20', 50 => '50', 100 => '100'],
-    'perpage',
-    $pagesize,
-    false,
-    ['id' => 'rangeos-perpage-select', 'class' => 'custom-select custom-select-sm w-auto', 'style' => 'vertical-align: middle;']
-);
+if (debugging('', DEBUG_NORMAL)) {
+    // Capture the slowest phase before appending the total, which would otherwise always win.
+    $slowest = null;
+    foreach ($_perfdata as $entry) {
+        if ($slowest === null || $entry['ms'] > $slowest['ms']) {
+            $slowest = $entry;
+        }
+    }
+    $_perf(
+        'Total: RangeOS page preparation',
+        $_requeststart,
+        'after Moodle bootstrap; excludes final HTML transmission'
+    );
+    $table = new html_table();
+    $table->head = ['Phase', 'Time (ms)', 'Details'];
+    $table->attributes['class'] = 'table table-sm table-striped mb-0';
+    foreach ($_perfdata as $entry) {
+        $table->data[] = [
+            s($entry['label']),
+            number_format($entry['ms'], 1),
+            s($entry['context']),
+        ];
+    }
+    $summary = $slowest
+        ? html_writer::div(
+            'Slowest measured phase: ' . s($slowest['label']) . ' — '
+                . number_format($slowest['ms'], 1) . ' ms',
+            'alert alert-info m-3'
+        )
+        : '';
+    echo html_writer::div(
+        html_writer::tag('h5', 'Library AU mapping performance', ['class' => 'card-header mb-0'])
+            . html_writer::div($summary . html_writer::table($table), 'card-body p-0'),
+        'card mt-3 mb-3'
+    );
+}
 
-// Keep the page-size control available even when the larger size fits on one page.
+// Keep pagination available whenever the library contains rows.
 if ($totalitems > 0) {
     echo html_writer::div(
-        html_writer::div($perpageselect, 'd-flex align-items-center mr-3') .
-            html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
+        html_writer::div($OUTPUT->paging_bar($totalitems, $currentpage, $pagesize, $pagingurl), 'd-flex align-items-center'),
         'rangeos-pagination d-flex flex-wrap align-items-center justify-content-center mt-3'
     );
 }

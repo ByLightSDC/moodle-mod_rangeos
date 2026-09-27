@@ -28,6 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 
 /** Keeps remote mapping pagination separate from the local content library. */
 class library_au_listing {
+    /** Number of library AUs shown on each page. */
+    public const PAGE_SIZE = 10;
+
     /**
      * Get one page of AUs from the latest version of each library package.
      *
@@ -36,13 +39,12 @@ class library_au_listing {
      *
      * @param int $packageid Package ID, or zero for all library packages.
      * @param int $page Zero-based requested page, clamped to the available range.
-     * @param int $pagesize Requested size; unsupported values use the default of 20.
      * @return array Page records, total count, effective page, and page size.
      */
-    public static function get_page(int $packageid, int $page, int $pagesize): array {
+    public static function get_page(int $packageid, int $page): array {
         global $DB;
 
-        $pagesize = in_array($pagesize, [20, 50, 100], true) ? $pagesize : 20;
+        $pagesize = self::PAGE_SIZE;
         $from = "FROM {cmi5_package_aus} pa
                   JOIN {cmi5_packages} p ON p.latestversion = pa.versionid";
         $where = $packageid !== 0 ? 'WHERE p.id = :packageid' : '';

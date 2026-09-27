@@ -292,7 +292,6 @@ require(['core/first'], function() {
     var container = document.querySelector('[data-versionid]');
     var envSelect = document.getElementById('rangeos-env-select');
     var pkgSelect = document.getElementById('rangeos-package-select');
-    var perpageSelect = document.getElementById('rangeos-perpage-select');
 
     function applyFilters() {
         var url = new URL(container.dataset.baseurl, window.location.href);
@@ -300,18 +299,12 @@ require(['core/first'], function() {
         if (pkgSelect) {
             url.searchParams.set('packageid', pkgSelect.value);
         }
-        if (perpageSelect) {
-            url.searchParams.set('perpage', perpageSelect.value);
-        }
         url.searchParams.set('page', '0');
         window.location.href = url.toString();
     }
 
     if (pkgSelect) {
         pkgSelect.addEventListener('change', applyFilters);
-    }
-    if (perpageSelect) {
-        perpageSelect.addEventListener('change', applyFilters);
     }
 });
 {{/js}}
