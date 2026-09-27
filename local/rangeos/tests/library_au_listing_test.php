@@ -66,7 +66,7 @@ final class library_au_listing_test extends \advanced_testcase {
         $this->resetAfterTest();
         $first = $this->create_package('A', 3);
         $second = $this->create_package('B', 2);
-        $page = library_au_listing::get_page(0, 0, 20);
+        $page = library_au_listing::get_page(0, 0);
         $this->assertSame(5, $page['total']);
         $this->assertCount(5, $page['aus']);
         $this->assertEquals([$first, $first, $first, $second, $second],
@@ -82,36 +82,30 @@ final class library_au_listing_test extends \advanced_testcase {
         $packageid = $this->create_package('A', 45);
         $this->create_package('B', 3);
         $ids = [];
-        foreach ([20, 20, 5] as $number => $expectedcount) {
-            $page = library_au_listing::get_page($packageid, $number, 20);
+        foreach ([10, 10, 10, 10, 5] as $number => $expectedcount) {
+            $page = library_au_listing::get_page($packageid, $number);
             $this->assertSame(45, $page['total']);
             $this->assertSame($number, $page['page']);
+            $this->assertSame(library_au_listing::PAGE_SIZE, $page['pagesize']);
             $this->assertCount($expectedcount, $page['aus']);
             $ids = array_merge($ids, array_keys($page['aus']));
         }
         $this->assertCount(45, array_unique($ids));
-        foreach ([50, 100] as $size) {
-            $page = library_au_listing::get_page($packageid, 0, $size);
-            $this->assertCount(45, $page['aus']);
-            $this->assertSame($size, $page['pagesize']);
-        }
     }
 
-    /** Invalid sizes/pages and empty packages produce a valid bounded result. */
+    /** Out-of-range pages and empty packages produce a valid bounded result. */
     public function test_bounds_and_empty_packages(): void {
         $this->resetAfterTest();
         $packageid = $this->create_package('A', 21);
-        $page = library_au_listing::get_page($packageid, 999, 20);
-        $this->assertSame(1, $page['page']);
+        $page = library_au_listing::get_page($packageid, 999);
+        $this->assertSame(2, $page['page']);
         $this->assertCount(1, $page['aus']);
-        foreach ([0, -1, 999] as $size) {
-            $page = library_au_listing::get_page($packageid, -1, $size);
-            $this->assertSame(0, $page['page']);
-            $this->assertSame(20, $page['pagesize']);
-            $this->assertCount(20, $page['aus']);
-        }
+        $page = library_au_listing::get_page($packageid, -1);
+        $this->assertSame(0, $page['page']);
+        $this->assertSame(library_au_listing::PAGE_SIZE, $page['pagesize']);
+        $this->assertCount(10, $page['aus']);
         $emptyid = $this->create_package('Empty', 0);
-        $page = library_au_listing::get_page($emptyid, 999, 20);
+        $page = library_au_listing::get_page($emptyid, 999);
         $this->assertSame(0, $page['total']);
         $this->assertSame(0, $page['page']);
         $this->assertSame([], $page['aus']);

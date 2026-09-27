@@ -14,13 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Cache definitions for local_rangeos.
+ *
+ * @package    local_rangeos
+ * @copyright  2026 Bylight
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_rangeos';
-$plugin->version = 2026092603;
-$plugin->requires = 2024100700; // Moodle 4.5+.
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.5.0';
-$plugin->dependencies = [
-    'mod_cmi5' => 2026022601,
+$definitions = [
+    'aumappings' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'ttl' => 30,
+    ],
 ];
