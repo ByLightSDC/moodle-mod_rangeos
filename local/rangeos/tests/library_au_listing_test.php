@@ -61,19 +61,25 @@ final class library_au_listing_test extends \advanced_testcase {
         return $packageid;
     }
 
-    /** Current package AUs are included without a local activity or remote mapping. */
+    /** Current package AUs are included once without a local activity or remote mapping. */
     public function test_library_scope_and_shared_iris(): void {
         $this->resetAfterTest();
         $first = $this->create_package('A', 3);
         $second = $this->create_package('B', 2);
         $page = library_au_listing::get_page(0, 0);
-        $this->assertSame(5, $page['total']);
-        $this->assertCount(5, $page['aus']);
-        $this->assertEquals([$first, $first, $first, $second, $second],
+        $this->assertSame(3, $page['total']);
+        $this->assertCount(3, $page['aus']);
+        $this->assertEquals([$first, $first, $first],
             array_values(array_column($page['aus'], 'packageid')));
+        $this->assertCount(3, array_unique(array_column($page['aus'], 'auid')));
         foreach ($page['aus'] as $au) {
             $this->assertStringContainsString('version:2:', $au->auid);
         }
+
+        $secondpage = library_au_listing::get_page($second, 0);
+        $this->assertSame(2, $secondpage['total']);
+        $this->assertCount(2, $secondpage['aus']);
+        $this->assertEquals([$second, $second], array_values(array_column($secondpage['aus'], 'packageid')));
     }
 
     /** Package filtering happens before counting and pages never overlap. */
