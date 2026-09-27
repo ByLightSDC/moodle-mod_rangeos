@@ -34,8 +34,9 @@ class library_au_listing {
     /**
      * Get one page of AUs from the latest version of each library package.
      *
-     * Rows represent package AUs: an IRI shared by two packages remains visible in both.
-     * The same query scope is used for counting and selecting, with a stable sort order.
+     * Each AU IRI appears once, even when it is shared by multiple packages. The lowest
+     * package AU record ID provides a deterministic representative for display purposes.
+     * The same package scope is used for counting and selecting.
      *
      * @param int $packageid Package ID, or zero for all library packages.
      * @param int $page Zero-based requested page, clamped to the available range.
@@ -44,22 +45,27 @@ class library_au_listing {
     public static function get_page(int $packageid, int $page): array {
         global $DB;
 
-        $pagesize = self::PAGE_SIZE;
         $from = "FROM {cmi5_package_aus} pa
                   JOIN {cmi5_packages} p ON p.latestversion = pa.versionid";
         $where = $packageid !== 0 ? 'WHERE p.id = :packageid' : '';
         $params = $packageid !== 0 ? ['packageid' => $packageid] : [];
-        $total = $DB->count_records_sql("SELECT COUNT(1) $from $where", $params);
-        $lastpage = $total > 0 ? (int) floor(($total - 1) / $pagesize) : 0;
+
+        $total = $DB->count_records_sql("SELECT COUNT(DISTINCT pa.auid) $from $where", $params);
+        $lastpage = $total > 0 ? intdiv($total - 1, self::PAGE_SIZE) : 0;
         $page = max(0, min($page, $lastpage));
+
+        // One record per AU IRI: the lowest ID keeps the representative deterministic.
+        $uniqueaus = "SELECT MIN(pa.id) AS id $from $where GROUP BY pa.auid";
         $aus = $DB->get_records_sql(
             "SELECT pa.*, p.id AS packageid, p.title AS packagetitle
-               $from $where
+               $from
+               JOIN ($uniqueaus) uniqueau ON uniqueau.id = pa.id
            ORDER BY p.title, p.id, pa.sortorder, pa.id",
             $params,
-            $page * $pagesize,
-            $pagesize
+            $page * self::PAGE_SIZE,
+            self::PAGE_SIZE
         );
-        return ['aus' => $aus, 'total' => $total, 'page' => $page, 'pagesize' => $pagesize];
+
+        return ['aus' => $aus, 'total' => $total, 'page' => $page, 'pagesize' => self::PAGE_SIZE];
     }
 }
