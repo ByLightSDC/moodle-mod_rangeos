@@ -78,12 +78,10 @@ $string['aumappings'] = 'AU Mappings';
 $string['manage_au_mappings'] = 'Manage AU-to-scenario mappings';
 
 // AU mapping management.
-$string['aumappings_global'] = 'AU Mappings (Global)';
 $string['aumappings_activity'] = 'AU Mappings';
 $string['au_iri'] = 'AU Id (IRI)';
 $string['au_title'] = 'AU Title';
 $string['type'] = 'Type';
-$string['mapping_name'] = 'Mapping name';
 $string['scenarios'] = 'Mapped Scenario';
 $string['scenario_class'] = 'Scenario class';
 $string['status'] = 'Status';
@@ -95,7 +93,6 @@ $string['deletemapping'] = 'Delete mapping';
 $string['deletemapping_confirm'] = 'Are you sure you want to delete the AU mapping for "{$a}"?';
 $string['mappingsaved'] = 'AU mapping saved.';
 $string['mappingdeleted'] = 'AU mapping deleted.';
-$string['nomappings'] = 'No AU mappings found.';
 $string['selectenvironment'] = 'Select environment';
 $string['searchscenarios'] = 'Search scenarios...';
 $string['allclasses'] = 'All classes';
@@ -175,9 +172,6 @@ $string['dashboardexplore'] = 'Open management page';
 
 // Library mapping scope.
 $string['alllibrarypackages'] = 'All Projects';
-$string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages. For all mappings in this environment, visit';
+$string['librarymapping_scope'] = 'Showing AUs from the latest versions of local library packages.';
 $string['nolibraryaus'] = 'No AUs found in the selected library packages.';
 $string['librarymapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} library AUs.';
-
-$string['globalmapping_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} AU mappings.';
-$string['apply'] = 'Apply';

@@ -41,7 +41,6 @@ class dashboard {
             'environment_profiles' => ['manageenvironments', 'manageenvironments', 'manageenvironments_desc', 'i/settings'],
             'library_au_mappings' => ['manageaumappings', 'library_aumappings', 'library_aumappings_desc', 'i/link'],
             'activity_environments' => ['manageenvironments', 'activityenvironments', 'activityenvironments_desc', 'i/course'],
-            'au_mappings' => ['manageaumappings', 'aumappings_global', 'manageaumappings_desc', 'i/link'],
         ];
         $context = \context_system::instance();
         $areas = [];

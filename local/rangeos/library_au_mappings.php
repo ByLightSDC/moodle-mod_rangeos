@@ -357,7 +357,6 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
         'action' => 'mapalldefaults',
         'sesskey' => sesskey(),
     ]))->out(false),
-    'globalmappingsurl' => (new moodle_url('/local/rangeos/au_mappings.php', ['envid' => $envid]))->out(false),
 ]);
 
 if (debugging('', DEBUG_NORMAL)) {

@@ -17,13 +17,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $functions = [
-    'local_rangeos_get_au_mappings' => [
-        'classname' => 'local_rangeos\external\get_au_mappings',
-        'description' => 'List AU-to-scenario mappings from devops-api',
-        'type' => 'read',
-        'ajax' => true,
-        'capabilities' => 'local/rangeos:viewaumappings',
-    ],
     'local_rangeos_create_au_mapping' => [
         'classname' => 'local_rangeos\external\create_au_mapping',
         'description' => 'Create an AU-to-scenario mapping via devops-api',

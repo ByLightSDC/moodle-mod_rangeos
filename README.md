@@ -33,11 +33,10 @@ Navigate to **Site administration > Plugins > Local plugins > RangeOS Integratio
 
 ### AU-to-Scenario Mappings
 
-Map cmi5 Assignable Units (AUs) to RangeOS scenarios. Supports three levels:
+Map cmi5 Assignable Units (AUs) to RangeOS scenarios from the relevant local context:
 
-- **Global mappings** — apply across all activities
-- **Library mappings** — per content library version, with class mode toggle
-- **Activity mappings** — per individual cmi5 activity instance
+- **Library mappings** — manage AUs from content-library packages, with class mode toggle
+- **Activity mappings** — manage AUs from an individual cmi5 activity instance
 
 The library mappings page also provides a **Class Mode toggle** that patches the AU's `config.json` in Moodle file storage to enable/disable the cmi5 player's class ID prompt — no content package rebuild required.
 
