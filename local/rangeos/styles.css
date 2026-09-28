@@ -30,6 +30,7 @@
     --rangeos-surface: var(--c5-surface, var(--bs-body-bg, #fff));
     --rangeos-sunken: var(--c5-sunken, color-mix(in srgb, var(--rangeos-accent) 4%, var(--rangeos-surface)));
     --rangeos-stage: var(--c5-stage, #f3f4f7);
+    --rangeos-open-bg: var(--c5-open-bg, #f5f7fd);
     --rangeos-border: var(--c5-line, var(--bs-border-color, #dce2e8));
     --rangeos-border-soft: var(--c5-line-soft, #edeff3);
     --rangeos-control-border: var(--c5-control-border, #cdd2dc);
@@ -398,6 +399,148 @@
     padding: 0;
     font-size: 1rem;
     line-height: 1;
+}
+
+/* The library AU list: one condensed row per AU, with the rest of its detail
+ * opened in place underneath, following cmi5's .mod-cmi5-lib-au-row and
+ * .mod-cmi5-lib-au-detail. The row carries only what the list is scanned by -
+ * the title, the full AU IRI and the scenarios it maps to. */
+.rangeos-dashboard .rangeos-au-col-scenario {
+    width: 26rem;
+}
+/* Scenario names are long and there can be several, so they read as a plain list
+ * rather than a row of pills clipped mid-word. */
+.rangeos-dashboard .rangeos-scenario-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: .8125rem;
+    line-height: 1.5;
+}
+.rangeos-dashboard .rangeos-scenario-list li + li {
+    margin-top: .125rem;
+}
+/* The whole title block is the expander, so the target is the row, not a glyph. */
+/* The width the chevron and its gap take up, which is how far the detail below
+ * has to be indented to line up with the title rather than the row's edge. */
+.rangeos-dashboard .rangeos-au-table {
+    --rangeos-au-indent: calc(var(--rangeos-row-gutter) + 1rem + .625rem);
+}
+.rangeos-dashboard .rangeos-au-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: .625rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.rangeos-dashboard .rangeos-au-toggle .rangeos-chevron {
+    flex: 0 0 auto;
+    margin-top: .125rem;
+    color: var(--rangeos-muted);
+    transition: transform .15s ease;
+}
+.rangeos-dashboard .rangeos-au-toggle[aria-expanded="true"] .rangeos-chevron {
+    transform: rotate(180deg);
+    color: var(--rangeos-accent);
+}
+.rangeos-dashboard .rangeos-au-toggle:hover .rangeos-au-title {
+    color: var(--rangeos-accent);
+}
+.rangeos-dashboard .rangeos-au-text {
+    display: flex;
+    flex-direction: column;
+    gap: .1875rem;
+    min-width: 0;
+}
+/* Which package an AU came from only matters while several are listed. */
+.rangeos-dashboard .rangeos-au-package {
+    color: var(--rangeos-faint);
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.rangeos-dashboard .rangeos-au-titleline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+.rangeos-dashboard .rangeos-au-title {
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+/* The IRI is an identifier people read in full, so it wraps instead of being cut
+ * off - capped at a few lines so one long IRI can't set the height of the list. */
+.rangeos-dashboard .rangeos-au-toggle .rangeos-auid {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 46rem;
+    color: var(--rangeos-muted);
+    font-size: .75rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+/* The detail sits in its own row, tinted so it reads as part of the row above. */
+.rangeos-dashboard .rangeos-au-detailrow[hidden] {
+    display: none;
+}
+.rangeos-dashboard .table .rangeos-au-detailrow > td:first-child {
+    height: auto;
+    /* Indented to the title above it, not to the row's edge: the detail is the
+     * row's content, and reads as a level below it. */
+    padding: .25rem var(--rangeos-row-gutter) 1.25rem var(--rangeos-au-indent);
+    border-top: 0;
+    background-color: var(--rangeos-open-bg);
+}
+/* An open row and its detail are one block, so they carry one background and the
+ * hover tint doesn't cut between them. */
+.rangeos-dashboard .rangeos-au-row:has(.rangeos-au-toggle[aria-expanded="true"]) > td,
+.rangeos-dashboard .rangeos-au-row:has(.rangeos-au-toggle[aria-expanded="true"]):hover > td,
+.rangeos-dashboard .rangeos-au-detailrow:hover > td {
+    background-color: var(--rangeos-open-bg);
+}
+.rangeos-dashboard .rangeos-detail-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .5rem 1.25rem;
+    margin: 0;
+    font-size: .875rem;
+}
+.rangeos-dashboard .rangeos-detail-grid dt {
+    color: var(--rangeos-ink-2);
+    font-weight: 600;
+}
+.rangeos-dashboard .rangeos-detail-grid dd {
+    min-width: 0;
+    margin: 0;
+}
+.rangeos-dashboard .rangeos-detail-grid dd > .rangeos-tag {
+    margin-right: .25rem;
+}
+/* The row's actions close the detail, on their own line under a divider, so the
+ * primary one can carry a full label instead of being squeezed into a column. */
+.rangeos-dashboard .rangeos-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+    margin-top: 1rem;
+    padding-top: .875rem;
+    border-top: 1px solid var(--rangeos-border-soft);
+}
+.rangeos-dashboard .rangeos-detail-actions-note {
+    color: var(--rangeos-ink-2);
+    font-size: .8125rem;
 }
 
 /* Status pills and tags, following cmi5's .mod-cmi5-pill and .mod-cmi5-lib-chip:
@@ -790,6 +933,7 @@
     .rangeos-dashboard .rangeos-feature-card,
     .rangeos-dashboard .rangeos-card-link span,
     .rangeos-dashboard .table > tbody > tr > *,
+    .rangeos-dashboard .rangeos-chevron,
     .rangeos-dashboard .btn {
         transition: none;
     }

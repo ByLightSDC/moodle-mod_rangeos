@@ -275,18 +275,16 @@ foreach ($aus as $au) {
         }
     }
 
-    // Truncate long AU IRIs for display.
-    $auidshort = $au->auid;
-    if (strlen($au->auid) > 60) {
-        $parts = explode('/', $au->auid);
-        $auidshort = '.../' . end($parts);
-    }
-
     $defaultscenariomissing = !empty($scenarioname) && !isset($scenariobynamelookup[$scenarioname]);
 
+    // Stable ids so the row's toggle can point at its own detail region. The AU IRI
+    // itself can't be one: it carries slashes and colons.
+    $rowindex = count($audata);
+
     $audata[] = [
+        'rowid' => 'rangeos-au-' . $rowindex,
+        'detailid' => 'rangeos-au-detail-' . $rowindex,
         'auid' => $au->auid,
-        'auid_short' => $auidshort,
         'title' => $au->title,
         'israngeos' => $israngeos,
         'scenarioname' => $scenarioname,
