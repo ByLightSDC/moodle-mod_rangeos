@@ -103,8 +103,9 @@ class au_mapping_manager {
     /**
      * Map all library AUs that declare a default RangeOS scenario to their matching scenario.
      *
-     * Walks every package's latest-version AUs, reads config.json in bulk per package,
-     * and creates a mapping for any AU that has a rangeosScenarioName and is not yet mapped.
+     * Walks every package's latest-version AUs, reading all their config.json files in one
+     * bulk query, and creates a mapping for any AU that has a rangeosScenarioName and is not
+     * yet mapped.
      *
      * Returns a results array ready for template rendering, with keys:
      *   created, failed, skipped, hascreated, hasfailed, createdcount, failedcount,
@@ -120,122 +121,94 @@ class au_mapping_manager {
 
         // Fetch all existing AU mappings to know which are already mapped.
         $mappedauids = [];
-        $mappage = 0;
-        do {
-            $mapresponse = $client->list_au_mappings(['page' => $mappage, 'pageSize' => 500]);
-            foreach ($mapresponse['data'] ?? $mapresponse['items'] ?? $mapresponse as $m) {
-                $m = (array) $m;
-                $auid = $m['auId'] ?? $m['auid'] ?? '';
-                if ($auid) {
-                    $mappedauids[$auid] = true;
-                }
-            }
-            $mappage++;
-        } while ($mappage < ($mapresponse['totalPages'] ?? 1));
-
-        // Fetch all content scenarios for a name → UUID lookup.
-        $scenariobynamelookup = [];
-        $scpage = 0;
-        do {
-            $scresponse = $client->list_content_scenarios(['page' => $scpage, 'pageSize' => 100]);
-            foreach ($scresponse['data'] ?? [] as $s) {
-                $s = (array) $s;
-                if (!empty($s['name']) && !empty($s['uuid'])) {
-                    $scenariobynamelookup[$s['name']] = $s['uuid'];
-                }
-            }
-            $scpage++;
-        } while ($scpage < ($scresponse['totalPages'] ?? 1));
-
-        // Build auid → primary course info lookup for results display.
-        $aucourselookup = [];
-        $courselookuprows = $DB->get_records_sql(
-            "SELECT DISTINCT pa.auid, co.id AS courseid, co.fullname AS coursename
-               FROM {cmi5_package_aus} pa
-               JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
-               JOIN {cmi5_aus} ca ON ca.auid = pa.auid
-               JOIN {cmi5} c5 ON c5.id = ca.cmi5id
-               JOIN {course} co ON co.id = c5.course
-              ORDER BY co.fullname ASC"
-        );
-        foreach ($courselookuprows as $clr) {
-            if (!isset($aucourselookup[$clr->auid])) {
-                $aucourselookup[$clr->auid] = ['name' => $clr->coursename, 'id' => (int) $clr->courseid];
+        foreach ($client->list_all_au_mappings() as $m) {
+            $m = (array) $m;
+            $auid = $m['auId'] ?? $m['auid'] ?? '';
+            if ($auid) {
+                $mappedauids[$auid] = true;
             }
         }
 
-        $packages = $DB->get_records('cmi5_packages', [], '', 'id, title, latestversion');
+        // Fetch all content scenarios for a name → UUID lookup. The cached read is the same
+        // one the listing page makes, so a run right after a page load costs no round trip.
+        $scenariobynamelookup = [];
+        $scenarioresponse = $client->get_cached_content_scenarios(['limit' => 1000]);
+        foreach ($scenarioresponse['data'] ?? [] as $s) {
+            $s = (array) $s;
+            if (!empty($s['name']) && !empty($s['uuid'])) {
+                $scenariobynamelookup[$s['name']] = $s['uuid'];
+            }
+        }
+
+        // Every latest-version AU in one query, ordered so the representative package for a
+        // shared AU IRI is deterministic.
+        $packageaus = $DB->get_records_sql(
+            "SELECT pa.id, pa.auid, pa.title, pa.url, pa.versionid, p.title AS packagetitle
+               FROM {cmi5_package_aus} pa
+               JOIN {cmi5_packages} p ON p.latestversion = pa.versionid
+           ORDER BY p.title, p.id, pa.sortorder, pa.id"
+        );
+
+        // Bulk-fetch the config.json of every version involved, in a single file-storage query.
+        $allconfigs = content_patcher::get_au_configs_for_versions(array_column($packageaus, 'versionid'));
+
         $results = ['created' => [], 'failed' => [], 'skipped' => 0];
         $seenauids = [];
 
-        foreach ($packages as $package) {
-            if (empty($package->latestversion)) {
+        foreach ($packageaus as $pau) {
+            $auid = $pau->auid ?? '';
+            if (!$auid || isset($seenauids[$auid]) || empty($pau->url)) {
                 continue;
             }
-            $versionid = (int) $package->latestversion;
-            $packageaus = $DB->get_records('cmi5_package_aus', ['versionid' => $versionid], 'sortorder ASC');
+            $seenauids[$auid] = true;
 
-            // Bulk-fetch all config.json files for this package in one query.
-            $allauconfigs = content_patcher::get_all_au_configs($versionid);
-
-            foreach ($packageaus as $pau) {
-                $auid = $pau->auid ?? '';
-                if (!$auid || isset($seenauids[$auid]) || empty($pau->url)) {
-                    continue;
-                }
-                $seenauids[$auid] = true;
-
-                $config = $allauconfigs[content_patcher::au_url_to_filepath($pau->url)] ?? null;
-                if ($config === null || empty($config['rangeosScenarioName'])) {
-                    continue;
-                }
-
-                $scenarioname = $config['rangeosScenarioName'];
-                $autitle = format_string($pau->title ?? $auid);
-                $entrycourse = $aucourselookup[$auid] ?? ['name' => '', 'id' => 0];
-                $entrypackagetitle = format_string($package->title);
-
-                if (isset($mappedauids[$auid])) {
-                    $results['skipped']++;
-                    continue;
-                }
-
-                if (!isset($scenariobynamelookup[$scenarioname])) {
-                    $results['failed'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'reason'       => 'Scenario not found in this environment',
-                        'coursename'   => $entrycourse['name'],
-                        'courseid'     => $entrycourse['id'],
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                    continue;
-                }
-
-                try {
-                    $client->create_au_mapping($auid, $pau->title ?? '', [$scenariobynamelookup[$scenarioname]]);
-                    $results['created'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'coursename'   => $entrycourse['name'],
-                        'courseid'     => $entrycourse['id'],
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                    $mappedauids[$auid] = true;
-                } catch (\Exception $e) {
-                    $results['failed'][] = [
-                        'title'        => $autitle,
-                        'auid'         => $auid,
-                        'scenarioname' => $scenarioname,
-                        'reason'       => $e->getMessage(),
-                        'coursename'   => $entrycourse['name'],
-                        'courseid'     => $entrycourse['id'],
-                        'packagetitle' => $entrypackagetitle,
-                    ];
-                }
+            $config = $allconfigs[(int) $pau->versionid][content_patcher::au_url_to_filepath($pau->url)] ?? null;
+            if ($config === null || empty($config['rangeosScenarioName'])) {
+                continue;
             }
+
+            if (isset($mappedauids[$auid])) {
+                $results['skipped']++;
+                continue;
+            }
+
+            $scenarioname = $config['rangeosScenarioName'];
+            $entry = [
+                'title'        => format_string($pau->title ?? $auid),
+                'auid'         => $auid,
+                'scenarioname' => $scenarioname,
+                'packagetitle' => format_string($pau->packagetitle),
+            ];
+
+            if (!isset($scenariobynamelookup[$scenarioname])) {
+                $entry['reason'] = 'Scenario not found in this environment';
+                $results['failed'][] = $entry;
+                continue;
+            }
+
+            try {
+                $client->create_au_mapping($auid, $pau->title ?? '', [$scenariobynamelookup[$scenarioname]]);
+                $results['created'][] = $entry;
+                $mappedauids[$auid] = true;
+            } catch (\Exception $e) {
+                $entry['reason'] = $e->getMessage();
+                $results['failed'][] = $entry;
+            }
+        }
+
+        // Course names are only needed for the AUs we are about to report on, so the lookup
+        // runs last and is keyed to that (usually small) set rather than the whole library.
+        $courselookup = self::get_au_course_lookup(array_merge(
+            array_column($results['created'], 'auid'),
+            array_column($results['failed'], 'auid')
+        ));
+        foreach (['created', 'failed'] as $type) {
+            foreach ($results[$type] as &$entry) {
+                $course = $courselookup[$entry['auid']] ?? ['name' => '', 'id' => 0];
+                $entry['coursename'] = $course['name'];
+                $entry['courseid'] = $course['id'];
+            }
+            unset($entry);
         }
 
         $results['hascreated']   = !empty($results['created']);
@@ -267,6 +240,45 @@ class au_mapping_manager {
         }
 
         return $results;
+    }
+
+    /**
+     * Resolve the primary local course for each of the given AU IRIs.
+     *
+     * An AU IRI can appear in activities across several courses; the alphabetically first
+     * course wins, which keeps the results grouping stable.
+     *
+     * @param string[] $auids AU IRIs to look up.
+     * @return array<string, array{name: string, id: int}> Course info keyed by AU IRI.
+     */
+    private static function get_au_course_lookup(array $auids): array {
+        global $DB;
+
+        $auids = array_values(array_unique(array_filter($auids)));
+        if (empty($auids)) {
+            return [];
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($auids, SQL_PARAMS_NAMED);
+        $rows = $DB->get_recordset_sql(
+            "SELECT ca.id, ca.auid, co.id AS courseid, co.fullname AS coursename
+               FROM {cmi5_aus} ca
+               JOIN {cmi5} c5 ON c5.id = ca.cmi5id
+               JOIN {course} co ON co.id = c5.course
+              WHERE ca.auid {$insql}
+           ORDER BY co.fullname ASC, co.id ASC",
+            $params
+        );
+
+        $lookup = [];
+        foreach ($rows as $row) {
+            if (!isset($lookup[$row->auid])) {
+                $lookup[$row->auid] = ['name' => $row->coursename, 'id' => (int) $row->courseid];
+            }
+        }
+        $rows->close();
+
+        return $lookup;
     }
 
     /**

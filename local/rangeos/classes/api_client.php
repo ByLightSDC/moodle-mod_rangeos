@@ -36,6 +36,12 @@ class api_client {
     /** @var int Maximum number of simultaneous AU mapping requests. */
     public const MAPPING_CONCURRENCY = 5;
 
+    /** @var int Rows requested per page when walking a paginated list endpoint. */
+    private const LIST_PAGE_SIZE = 500;
+
+    /** @var int Safety stop for a list endpoint that ignores offset, so a walk always terminates. */
+    private const LIST_MAX_PAGES = 100;
+
     /** @var int Environment record ID, used to scope cached API data. */
     private int $environmentid;
 
@@ -148,6 +154,47 @@ class api_client {
      */
     public function list_au_mappings(array $params = []): array {
         return $this->get('/v1/cmi5/auMapping', $params);
+    }
+
+    /**
+     * List every AU mapping, following the API's offset/limit pagination.
+     *
+     * This endpoint takes 'offset' and 'limit'; it ignores 'page' and 'pageSize', and reports
+     * totalPages against its default limit of 10. Paging on the wrong parameter therefore
+     * re-fetches the whole list once per nominal page, so always walk it with this method.
+     *
+     * @return array Mapping rows from every page.
+     */
+    public function list_all_au_mappings(): array {
+        return $this->fetch_all_pages('/v1/cmi5/auMapping');
+    }
+
+    /**
+     * Fetch every row from a paginated list endpoint.
+     *
+     * Pages on offset/limit and stops once totalCount is covered, so a caller never depends on
+     * totalPages, which is reported against the endpoint's own default limit.
+     *
+     * @param string $path API path.
+     * @param array $params Additional query parameters.
+     * @return array Rows from every page, in server order.
+     */
+    private function fetch_all_pages(string $path, array $params = []): array {
+        $items = [];
+        $offset = 0;
+        $pages = 0;
+        do {
+            $response = $this->get($path, $params + ['offset' => $offset, 'limit' => self::LIST_PAGE_SIZE]);
+            $page = $response['data'] ?? $response['items'] ?? [];
+            foreach ($page as $item) {
+                $items[] = $item;
+            }
+            $total = (int) ($response['totalCount'] ?? count($items));
+            $offset += self::LIST_PAGE_SIZE;
+            $pages++;
+        } while (!empty($page) && count($items) < $total && $pages < self::LIST_MAX_PAGES);
+
+        return $items;
     }
 
     /**

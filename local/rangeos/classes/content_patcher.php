@@ -170,19 +170,45 @@ class content_patcher {
      * @return array<string, array> filepath => decoded config, omitting files with invalid JSON.
      */
     public static function get_all_au_configs(int $versionid): array {
-        $fs = get_file_storage();
-        $syscontext = \context_system::instance();
-        $files = $fs->get_area_files(
-            $syscontext->id, 'mod_cmi5', 'library_content', $versionid, 'filepath', false
+        return self::get_au_configs_for_versions([$versionid])[$versionid] ?? [];
+    }
+
+    /**
+     * Pre-fetch the AU config.json files for several package versions in one query.
+     *
+     * The files table is queried directly on filename, so a package's other content — every
+     * slide, image and script — is never loaded just to reach its handful of configs.
+     *
+     * @param int[] $versionids Package version IDs (itemids in file storage).
+     * @return array<int, array<string, array>> versionid => filepath => decoded config.
+     *         Every requested version is present, with an empty array when it has no configs.
+     */
+    public static function get_au_configs_for_versions(array $versionids): array {
+        global $DB;
+
+        $versionids = array_values(array_unique(array_filter(array_map('intval', $versionids))));
+        if (empty($versionids)) {
+            return [];
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($versionids, SQL_PARAMS_NAMED);
+        $params['contextid'] = \context_system::instance()->id;
+        $records = $DB->get_records_select(
+            'files',
+            "contextid = :contextid
+               AND component = 'mod_cmi5'
+               AND filearea = 'library_content'
+               AND filename = 'config.json'
+               AND itemid {$insql}",
+            $params
         );
-        $configs = [];
-        foreach ($files as $file) {
-            if ($file->get_filename() !== 'config.json') {
-                continue;
-            }
-            $decoded = json_decode($file->get_content(), true);
+
+        $fs = get_file_storage();
+        $configs = array_fill_keys($versionids, []);
+        foreach ($records as $record) {
+            $decoded = json_decode($fs->get_file_instance($record)->get_content(), true);
             if ($decoded !== null || json_last_error() === JSON_ERROR_NONE) {
-                $configs[$file->get_filepath()] = $decoded;
+                $configs[(int) $record->itemid][$record->filepath] = $decoded;
             }
         }
         return $configs;
