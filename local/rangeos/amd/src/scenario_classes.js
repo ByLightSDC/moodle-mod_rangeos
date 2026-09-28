@@ -244,7 +244,7 @@ const showCreateClassModal = () => {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="${modalId}-cancel">Cancel</button>
+                        <button type="button" class="btn btn-outline-secondary" id="${modalId}-cancel">Cancel</button>
                         <button type="button" class="btn btn-primary" id="${modalId}-save">Create</button>
                     </div>
                 </div>
@@ -385,7 +385,7 @@ const showAddSeatsModal = (className, knownScenarioId) => {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="${modalId}-cancel">Cancel</button>
+                        <button type="button" class="btn btn-outline-secondary" id="${modalId}-cancel">Cancel</button>
                         <button type="button" class="btn btn-primary" id="${modalId}-save">Add Seats</button>
                     </div>
                 </div>
