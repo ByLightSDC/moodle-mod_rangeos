@@ -158,9 +158,15 @@ $string['mapalldefaults_desc'] = 'Create mappings for every unmapped AU that has
 $string['activityenvironments'] = 'Activity Environments';
 $string['activityenvironments_desc'] = 'View and change which RangeOS environment each cmi5 activity is assigned to, all from one place.';
 $string['activity'] = 'Activity';
-$string['filterbycourse'] = 'Filter by course';
-$string['allcourses'] = 'All courses';
 $string['noactivities'] = 'No cmi5 activities found.';
+$string['noactivitiesmatch'] = 'No activities match these filters.';
+$string['searchactivities'] = 'Search activities';
+$string['searchactivities_placeholder'] = 'Activity or course name...';
+$string['filterbyenvironment'] = 'Environment';
+$string['allenvironments'] = 'All environments';
+$string['unassignedenvironment'] = 'Not assigned';
+$string['clearfilters'] = 'Clear filters';
+$string['activityenvironments_count'] = 'Showing {$a->first}–{$a->last} of {$a->total} activities.';
 
 // Errors.
 $string['error:confignotfound'] = 'config.json not found: {$a}';
