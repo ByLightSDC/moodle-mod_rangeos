@@ -152,6 +152,7 @@ $string['addseats'] = 'Add Seats';
 // Default scenario mapping.
 $string['usedefault'] = 'Use default';
 $string['mapalldefaults'] = 'Map all defaults';
+$string['defaultscenario'] = 'Default scenario';
 $string['mapalldefaults_desc'] = 'Create mappings for every unmapped AU that has a default scenario set in its RC5 config.';
 
 // Activity environment assignment.

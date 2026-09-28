@@ -55,6 +55,23 @@ export const init = () => {
         }
     });
 
+    // Row expanders. The detail lives in its own <tr>, which the row's toggle
+    // names through aria-controls, so the two stay tied together without the
+    // markup having to encode an AU IRI into a selector.
+    document.addEventListener('click', (e) => {
+        const toggle = e.target.closest('[data-action="toggle-au-detail"]');
+        if (!toggle) {
+            return;
+        }
+        const detail = document.getElementById(toggle.getAttribute('aria-controls'));
+        if (!detail) {
+            return;
+        }
+        const open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+        detail.hidden = open;
+    });
+
     // Delegate click handlers for mapping actions.
     document.addEventListener('click', (e) => {
         const createBtn = e.target.closest('[data-action="create-mapping"]');
