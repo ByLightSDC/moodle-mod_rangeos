@@ -5,39 +5,57 @@
     @copyright  2026 Bylight
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
-<div data-baseurl="{{baseurl}}">
-
-    {{#noenvironments}}
+<div>
+    {{^hasenvironments}}
     <div class="alert alert-warning">
         {{#str}}noenvironments, local_rangeos{{/str}}
     </div>
-    {{/noenvironments}}
+    {{/hasenvironments}}
 
     {{#hasenvironments}}
 
-    {{#hascourses}}
-    <div class="rangeos-toolbar">
-        <div class="rangeos-field rangeos-field-grow">
-            <label for="rangeos-course-filter">{{#str}}filterbycourse, local_rangeos{{/str}}</label>
-            <select id="rangeos-course-filter" class="custom-select" data-action="filter-course">
-                {{#courseoptions}}
+    <form id="rangeos-activity-search-form" class="rangeos-toolbar" action="{{baseurl}}" method="get">
+        <div class="rangeos-toolbar-group">
+            <div class="rangeos-field rangeos-field-grow">
+                <label for="rangeos-activity-search">{{#str}}searchactivities, local_rangeos{{/str}}</label>
+                <input type="search"
+                       id="rangeos-activity-search"
+                       name="search"
+                       class="form-control"
+                       value="{{search}}"
+                       placeholder="{{#str}}searchactivities_placeholder, local_rangeos{{/str}}"
+                       autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-outline-primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+                {{#str}}search{{/str}}
+            </button>
+            {{#hasfilters}}
+            <a href="{{baseurl}}" class="btn btn-outline-secondary">
+                {{#str}}clearfilters, local_rangeos{{/str}}
+            </a>
+            {{/hasfilters}}
+        </div>
+
+        <div class="rangeos-field rangeos-field-env">
+            <label for="rangeos-env-filter">{{#str}}filterbyenvironment, local_rangeos{{/str}}</label>
+            <select id="rangeos-env-filter" name="envfilter" class="custom-select">
+                {{#envfilteroptions}}
                 <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
-                {{/courseoptions}}
+                {{/envfilteroptions}}
             </select>
         </div>
-    </div>
-    {{/hascourses}}
+    </form>
 
     {{#hasactivities}}
-    <div id="rangeos-activity-env-status" class="rangeos-save-status mb-2" role="status" aria-live="polite"></div>
+    <p class="rangeos-result-count">{{rowsummary}}</p>
     <div class="table-responsive rangeos-table-panel">
-    <table class="table table-striped table-hover" id="rangeos-activity-env-table">
-        <thead class="thead-light">
+    <table class="table" id="rangeos-activity-env-table">
+        <thead>
             <tr>
                 <th>{{#str}}course{{/str}}</th>
                 <th>{{#str}}activity, local_rangeos{{/str}}</th>
                 <th>{{#str}}environment, local_rangeos{{/str}}</th>
-                <th>{{#str}}actions{{/str}}</th>
             </tr>
         </thead>
         <tbody>
@@ -59,12 +77,6 @@
                     </select>
                     <span class="rangeos-save-indicator ml-2" style="display:none;"></span>
                 </td>
-                <td class="rangeos-row-actions">
-                    <a href="{{settingsurl}}" class="btn btn-sm btn-outline-secondary rangeos-icon-btn"
-                       title="{{#str}}settings{{/str}}" aria-label="{{#str}}settings{{/str}}">
-                        <span aria-hidden="true">&#9881;</span>
-                    </a>
-                </td>
             </tr>
             {{/activities}}
         </tbody>
@@ -74,7 +86,12 @@
 
     {{^hasactivities}}
     <div class="alert alert-info rangeos-empty-state">
+        {{#hasfilters}}
+        {{#str}}noactivitiesmatch, local_rangeos{{/str}}
+        {{/hasfilters}}
+        {{^hasfilters}}
         {{#str}}noactivities, local_rangeos{{/str}}
+        {{/hasfilters}}
     </div>
     {{/hasactivities}}
 

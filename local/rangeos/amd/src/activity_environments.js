@@ -75,16 +75,9 @@ const assignEnvironment = async(select) => {
  * Initialize the activity environments page.
  */
 export const init = () => {
-    // Course filter — reload page with courseid param.
-    const courseFilter = document.querySelector('[data-action="filter-course"]');
-    if (courseFilter) {
-        courseFilter.addEventListener('change', (e) => {
-            const baseUrl = document.querySelector('[data-baseurl]')?.dataset.baseurl;
-            if (baseUrl) {
-                const sep = baseUrl.includes('?') ? '&' : '?';
-                window.location.href = `${baseUrl}${sep}courseid=${e.target.value}`;
-            }
-        });
+    const envFilter = document.getElementById('rangeos-env-filter');
+    if (envFilter) {
+        envFilter.addEventListener('change', () => envFilter.form.requestSubmit());
     }
 
     // Environment dropdowns — delegate via document so it works after any DOM updates.
