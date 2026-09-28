@@ -216,10 +216,16 @@ if (!empty($allauids)) {
     $_perf('DB: AU activity lookup', $_t, count($records) . ' activity rows');
 }
 
-// Cache config files per version, including when browsing all library packages.
-$configms = 0.0;
-$configcount = 0;
-$configsbyversion = [];
+// Read this page's config files up front: one query covers every version on the page,
+// including when browsing all library packages.
+$_t = microtime(true);
+$configsbyversion = content_patcher::get_au_configs_for_versions(array_column($aus, 'versionid'));
+$configcount = array_sum(array_map('count', $configsbyversion));
+$_perf(
+    'Files: load AU config.json',
+    $_t,
+    count($configsbyversion) . ' versions, ' . $configcount . ' configs'
+);
 $audata = [];
 foreach ($aus as $au) {
     $mapping = $aumappings[$au->auid] ?? null;
@@ -243,12 +249,6 @@ foreach ($aus as $au) {
     $scenarioname = '';
     $auversionid = (int) $au->versionid;
     if (!empty($auversionid) && !empty($au->url)) {
-        if (!array_key_exists($auversionid, $configsbyversion)) {
-            $_configstart = microtime(true);
-            $configsbyversion[$auversionid] = content_patcher::get_all_au_configs($auversionid);
-            $configms += (microtime(true) - $_configstart) * 1000;
-            $configcount += count($configsbyversion[$auversionid]);
-        }
         $config = $configsbyversion[$auversionid][content_patcher::au_url_to_filepath($au->url)] ?? null;
         if ($config !== null && !empty($config['rangeosScenarioUUID'])) {
             $israngeos = true;
@@ -302,12 +302,6 @@ foreach ($aus as $au) {
         'haspackageinfo' => true,
     ];
 }
-$_addperf(
-    'Files: load AU config.json',
-    $configms,
-    count($configsbyversion) . ' versions, ' . $configcount . ' configs'
-);
-
 // Preserve the library filters when the shared AMD handler changes the environment.
 $baseurl = (new moodle_url('/local/rangeos/library_au_mappings.php', [
     'packageid' => $packageid,
