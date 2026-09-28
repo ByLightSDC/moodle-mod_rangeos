@@ -8,24 +8,48 @@
 
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
+import {get_string as getString} from 'core/str';
+
+/** How long the outcome stays beside the dropdown, in milliseconds. */
+const INDICATOR_TIMEOUT = 2500;
+
+/** Timers keyed by indicator, so a second save cancels the first one's fade. */
+const indicatorTimers = new WeakMap();
 
 /**
  * Show a brief save indicator next to the dropdown.
  *
+ * The outcome is stated in words rather than a tick or a cross: the indicator carries
+ * aria-live, so this is the only confirmation a screen reader gets that the change
+ * was saved.
+ *
  * @param {HTMLElement} select  The select element that changed.
  * @param {boolean}     success Whether the save succeeded.
+ * @returns {Promise<void>}
  */
-const showIndicator = (select, success) => {
+const showIndicator = async(select, success) => {
     const indicator = select.parentElement.querySelector('.rangeos-save-indicator');
     if (!indicator) {
         return;
     }
-    indicator.textContent = success ? '✓' : '✗';
-    indicator.className = 'rangeos-save-indicator ml-2 ' + (success ? 'text-success' : 'text-danger');
-    indicator.style.display = '';
-    setTimeout(() => {
-        indicator.style.display = 'none';
-    }, 2500);
+
+    clearTimeout(indicatorTimers.get(indicator));
+
+    indicator.textContent = await getString(
+        success ? 'environmentassigned' : 'environmentassignfailed',
+        'local_rangeos'
+    );
+    indicator.className = 'rangeos-save-indicator is-shown '
+        + (success ? 'rangeos-save-indicator-ok' : 'rangeos-save-indicator-bad');
+
+    indicatorTimers.set(indicator, setTimeout(() => {
+        indicator.classList.remove('is-shown');
+        // Emptied only once it has faded, so the text doesn't vanish mid-transition.
+        indicatorTimers.set(indicator, setTimeout(() => {
+            indicator.textContent = '';
+            indicator.className = 'rangeos-save-indicator';
+        }, 150));
+    }, INDICATOR_TIMEOUT));
 };
 
 /**
@@ -43,7 +67,7 @@ const assignEnvironment = async(select) => {
 
     // envid === 0 means "None" — nothing to assign, just reflect the choice.
     if (envid === 0) {
-        showIndicator(select, true);
+        await showIndicator(select, true);
         return;
     }
 
@@ -53,13 +77,13 @@ const assignEnvironment = async(select) => {
             methodname: 'local_rangeos_apply_environment_profile',
             args: {envid, cmi5ids: [cmi5id]},
         }])[0];
-        showIndicator(select, true);
+        await showIndicator(select, true);
         const row = select.closest('tr');
         if (row) {
             row.dataset.currentEnvid = envid;
         }
     } catch (err) {
-        showIndicator(select, false);
+        await showIndicator(select, false);
         Notification.exception(err);
         // Revert to previous value.
         const row = select.closest('tr');

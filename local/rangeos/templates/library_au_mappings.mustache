@@ -7,9 +7,9 @@
 }}
 <div data-baseurl="{{baseurl}}" data-versionid="{{versionid}}">
     {{^hasenvironments}}
-    <div class="alert alert-info rangeos-empty-state">
-        {{#str}}noenvironments, local_rangeos{{/str}}
-    </div>
+    {{#emptyenvironments}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyenvironments}}
     {{/hasenvironments}}
 
     <div class="rangeos-toolbar">
@@ -27,7 +27,7 @@
                        autocomplete="off">
             </div>
             <button type="submit" class="btn btn-outline-primary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+                {{> local_rangeos/icon_search }}
                 {{#str}}search{{/str}}
             </button>
             <datalist id="rangeos-package-suggestions">
@@ -48,7 +48,9 @@
     <div class="rangeos-actions">
         <a href="{{mapallurl}}"
            class="btn btn-success"
-           onclick="return confirm('This will create mappings for every unmapped AU that has a default scenario in its RC5 config. Continue?')">
+           data-rangeos-confirm="mapalldefaults_confirm"
+           data-rangeos-confirm-title="mapalldefaults_confirmtitle"
+           data-rangeos-confirm-action="mapalldefaults">
             {{#str}}mapalldefaults, local_rangeos{{/str}}
         </a>
         <small class="text-muted ml-2">{{#str}}mapalldefaults_desc, local_rangeos{{/str}}</small>
@@ -58,20 +60,20 @@
     {{#hasmapresults}}
     {{#mapresults}}
     <div class="card mb-4">
-        <div class="card-header font-weight-bold">Map all defaults — results</div>
+        <div class="card-header font-weight-bold">{{#str}}mapalldefaults_results, local_rangeos{{/str}}</div>
         <div class="card-body p-0">
             {{#hascreated}}
             <div class="px-3 py-3{{#hasfailed}} border-bottom{{/hasfailed}}">
-                <h6 class="text-success mb-3">Created ({{createdcount}})</h6>
+                <h6 class="text-success mb-3">{{#str}}mapalldefaults_created, local_rangeos, {{createdcount}}{{/str}}</h6>
                 {{#created_by_course}}
                 <p class="mb-1 small font-weight-bold text-muted text-uppercase">
-                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
-                    {{^hascourse}}No local course{{/hascourse}}
+                    {{#hascourse}}{{#str}}courseidlabel, local_rangeos, {{courseid}}{{/str}}{{/hascourse}}
+                    {{^hascourse}}{{#str}}nolocalcourse, local_rangeos{{/str}}{{/hascourse}}
                     <span class="rangeos-tag ml-1">{{itemcount}}</span>
                 </p>
                 <div class="table-responsive rangeos-table-panel">
                 <table class="table table-sm table-bordered mb-3">
-                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th></tr></thead>
+                    <thead class="thead-light"><tr><th>{{#str}}au_title, local_rangeos{{/str}}</th><th>{{#str}}scenarios, local_rangeos{{/str}}</th></tr></thead>
                     <tbody>
                         {{#items}}
                         <tr>
@@ -90,16 +92,16 @@
             {{/hascreated}}
             {{#hasfailed}}
             <div class="px-3 py-3">
-                <h6 class="text-danger mb-3">Failed ({{failedcount}})</h6>
+                <h6 class="text-danger mb-3">{{#str}}mapalldefaults_failed, local_rangeos, {{failedcount}}{{/str}}</h6>
                 {{#failed_by_course}}
                 <p class="mb-1 small font-weight-bold text-muted text-uppercase">
-                    {{#hascourse}}Course ID: {{courseid}}{{/hascourse}}
-                    {{^hascourse}}No local course{{/hascourse}}
+                    {{#hascourse}}{{#str}}courseidlabel, local_rangeos, {{courseid}}{{/str}}{{/hascourse}}
+                    {{^hascourse}}{{#str}}nolocalcourse, local_rangeos{{/str}}{{/hascourse}}
                     <span class="rangeos-tag ml-1">{{itemcount}}</span>
                 </p>
                 <div class="table-responsive rangeos-table-panel">
                 <table class="table table-sm table-bordered mb-3">
-                    <thead class="thead-light"><tr><th>AU</th><th>Scenario</th><th>Reason</th></tr></thead>
+                    <thead class="thead-light"><tr><th>{{#str}}au_title, local_rangeos{{/str}}</th><th>{{#str}}scenarios, local_rangeos{{/str}}</th><th>{{#str}}mapalldefaults_reason, local_rangeos{{/str}}</th></tr></thead>
                     <tbody>
                         {{#items}}
                         <tr>
@@ -119,13 +121,12 @@
             {{/hasfailed}}
             {{^hascreated}}{{^hasfailed}}
             <div class="px-3 py-3 text-muted">
-                No new mappings created.
-                {{#skipped}}({{skipped}} already mapped.){{/skipped}}
+                {{#str}}mapalldefaults_nonecreated, local_rangeos{{/str}}
             </div>
             {{/hasfailed}}{{/hascreated}}
         </div>
         {{#skipped}}
-        <div class="card-footer text-muted small">{{skipped}} AU(s) skipped — already mapped.</div>
+        <div class="card-footer text-muted small">{{#str}}mapalldefaults_skipped, local_rangeos, {{skipped}}{{/str}}</div>
         {{/skipped}}
     </div>
     {{/mapresults}}
@@ -151,156 +152,22 @@
         </thead>
         <tbody>
             {{#aus}}
-            <tr class="rangeos-au-row">
-                <td>
-                    <button type="button" class="rangeos-au-toggle" id="{{rowid}}"
-                            data-action="toggle-au-detail"
-                            aria-expanded="false" aria-controls="{{detailid}}">
-                        <svg class="rangeos-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg>
-                        <span class="rangeos-au-text">
-                            {{#showpackagecolumn}}
-                            <span class="rangeos-au-package">{{packagetitle}}</span>
-                            {{/showpackagecolumn}}
-                            <span class="rangeos-au-titleline">
-                                <span class="rangeos-au-title">{{title}}</span>
-                                {{#israngeos}}
-                                <span class="rangeos-tag rangeos-tag-accent">RangeOS</span>
-                                {{/israngeos}}
-                            </span>
-                            <code class="rangeos-auid">{{auid}}</code>
-                        </span>
-                    </button>
-                </td>
-                <td class="rangeos-au-col-scenario">
-                    {{#israngeos}}
-                        {{#scenario_count}}
-                        <ul class="rangeos-scenario-list">
-                            {{#scenario_badges}}
-                            <li>{{.}}</li>
-                            {{/scenario_badges}}
-                        </ul>
-                        {{/scenario_count}}
-                        {{^scenario_count}}
-                        <span class="rangeos-tag rangeos-tag-empty">None</span>
-                        {{/scenario_count}}
-                    {{/israngeos}}
-                    {{^israngeos}}
-                    <span class="text-muted">&mdash;</span>
-                    {{/israngeos}}
-                </td>
-            </tr>
-            <tr class="rangeos-au-detailrow" id="{{detailid}}" role="region" aria-labelledby="{{rowid}}" hidden>
-                <td colspan="2">
-                    <dl class="rangeos-detail-grid">
-                        {{^showpackagecolumn}}
-                        <dt>CMI5 Package</dt>
-                        <dd>{{packagetitle}}</dd>
-                        {{/showpackagecolumn}}
-
-                        <dt>{{#str}}type, local_rangeos{{/str}}</dt>
-                        <dd>
-                            <span class="rangeos-tag">cmi5</span>
-                            {{#israngeos}}<span class="rangeos-tag rangeos-tag-accent">RangeOS</span>{{/israngeos}}
-                        </dd>
-
-                        {{#scenarioname}}
-                        <dt>{{#str}}defaultscenario, local_rangeos{{/str}}</dt>
-                        <dd>
-                            {{scenarioname}}
-                            {{#defaultscenariomissing}}
-                            <span class="rangeos-pill rangeos-pill-warn">Not in this environment</span>
-                            {{/defaultscenariomissing}}
-                        </dd>
-                        {{/scenarioname}}
-
-                        <dt>Activity</dt>
-                        <dd>
-                            {{#hasactivities}}
-                            {{#activities}}
-                            <div>
-                                <a href="{{{config.wwwroot}}}/mod/cmi5/view.php?id={{cmid}}">{{activityname}}</a>
-                                <span class="text-muted">({{coursename}})</span>
-                            </div>
-                            {{/activities}}
-                            {{/hasactivities}}
-                            {{^hasactivities}}
-                            <span class="text-muted">&mdash;</span>
-                            {{/hasactivities}}
-                        </dd>
-
-                        {{#hasselectedpackage}}
-                        <dt>{{#str}}classmode, local_rangeos{{/str}}</dt>
-                        <dd>
-                            {{#israngeos}}
-                            <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input"
-                                       id="classmode-{{rowid}}"
-                                       data-action="toggle-classmode"
-                                       data-auid="{{auid}}"
-                                       {{#classmode}}checked{{/classmode}}>
-                                <label class="custom-control-label" for="classmode-{{rowid}}"></label>
-                            </div>
-                            {{/israngeos}}
-                            {{^israngeos}}
-                            <span class="text-muted">&mdash;</span>
-                            {{/israngeos}}
-                        </dd>
-                        {{/hasselectedpackage}}
-                    </dl>
-
-                    {{#israngeos}}
-                    <div class="rangeos-detail-actions">
-                        {{#ismapped}}
-                        <button class="btn btn-outline-primary"
-                                data-action="edit-mapping"
-                                data-auid="{{auid}}"
-                                data-autitle="{{mapping_name}}"
-                                data-scenarios="{{scenarios_json}}">
-                            {{#str}}editmapping, local_rangeos{{/str}}
-                        </button>
-                        {{/ismapped}}
-                        {{^ismapped}}
-                        {{#scenarioname}}
-                        {{^defaultscenariomissing}}
-                        <button class="btn btn-primary"
-                                data-action="create-default-mapping"
-                                data-auid="{{auid}}"
-                                data-autitle="{{title}}"
-                                data-defaultscenarioname="{{scenarioname}}">
-                            {{#str}}usedefault, local_rangeos{{/str}}
-                        </button>
-                        {{/defaultscenariomissing}}
-                        {{/scenarioname}}
-                        <button class="btn btn-outline-primary"
-                                data-action="create-mapping"
-                                data-auid="{{auid}}"
-                                data-autitle="{{title}}"
-                                data-scenarios="[]">
-                            {{#str}}createmapping, local_rangeos{{/str}}
-                        </button>
-                        {{#defaultscenariomissing}}
-                        <span class="rangeos-detail-actions-note">
-                            {{#str}}usedefault, local_rangeos{{/str}} unavailable: &ldquo;{{scenarioname}}&rdquo; is not in this environment.
-                        </span>
-                        {{/defaultscenariomissing}}
-                        {{/ismapped}}
-                    </div>
-                    {{/israngeos}}
-                </td>
-            </tr>
+            {{> local_rangeos/au_row }}
             {{/aus}}
         </tbody>
     </table>
     </div>
     {{/hasaus}}
 
+    {{#hasenvironments}}
     {{^hasaus}}
     {{^haserror}}
-    <div class="alert alert-info rangeos-empty-state">
-        {{#str}}nolibraryaus, local_rangeos{{/str}}
-    </div>
+    {{#emptyrows}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyrows}}
     {{/haserror}}
     {{/hasaus}}
+    {{/hasenvironments}}
 
 </div>
 

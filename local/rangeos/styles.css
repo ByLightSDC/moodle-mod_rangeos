@@ -343,6 +343,12 @@
 .rangeos-dashboard .table > tbody > tr:hover > * {
     background-color: var(--rangeos-sunken);
 }
+/* Two row rhythms, deliberately: a page's primary list is a plain .table at 56px, and
+ * .table-sm's 48px is reserved for a result table nested inside a panel, where the
+ * shorter row reads as a level below the list that owns it. A primary list must not
+ * take .table-sm, or two pages of the same kind end up on different rhythms.
+ * Bootstrap's .table-striped is never used: the stripe is cancelled below, since only
+ * the hover tint is meant to carry meaning. */
 .rangeos-dashboard .table-sm td {
     height: 48px;
     padding-top: .5rem;
@@ -399,6 +405,15 @@
     padding: 0;
     font-size: 1rem;
     line-height: 1;
+}
+
+/* The scenario class list. The two leading columns are sized here and the actions
+ * column takes what is left, rather than the three being set inline in the template. */
+.rangeos-dashboard .rangeos-class-col-id {
+    width: 30%;
+}
+.rangeos-dashboard .rangeos-class-col-seats {
+    width: 40%;
 }
 
 /* The library AU list: one condensed row per AU, with the rest of its detail
@@ -804,9 +819,15 @@
     background-color: var(--rangeos-warn-bg);
     color: var(--rangeos-warn-ink);
 }
-/* An empty area is not news: it states the case quietly, where the rows would be. */
+/* An empty area is not news: it states the case quietly, where the rows would be, and
+ * offers the step that fills it. Stacked centred: a muted glyph, the headline naming
+ * what is missing, one line of guidance, then the action. See
+ * templates/empty_state.mustache. */
 .rangeos-dashboard .rangeos-empty-state,
 .rangeos-dashboard .alert.rangeos-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 2.5rem var(--rangeos-panel-padding);
     border: 1px dashed var(--rangeos-border);
     border-radius: var(--rangeos-radius-panel);
@@ -814,6 +835,36 @@
     color: var(--rangeos-ink-2);
     font-size: .875rem;
     text-align: center;
+}
+/* The glyph labels the area without competing with the headline, so it sits at the
+ * muted weight rather than the accent. */
+.rangeos-dashboard .rangeos-empty-state-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: .875rem;
+    border-radius: 50%;
+    background: var(--rangeos-stage);
+    color: var(--rangeos-faint);
+}
+.rangeos-dashboard .rangeos-empty-state-title {
+    margin: 0 0 .25rem;
+    color: var(--rangeos-ink);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+/* Held to a reading measure: centred text past about 60 characters is hard to track. */
+.rangeos-dashboard .rangeos-empty-state-message {
+    max-width: 44ch;
+    margin: 0;
+    color: var(--rangeos-ink-2);
+    line-height: 1.5;
+}
+.rangeos-dashboard .rangeos-empty-state .btn {
+    margin-top: 1.125rem;
 }
 
 /* Page furniture. */
@@ -843,10 +894,57 @@
     color: var(--rangeos-muted);
     font-size: .8125rem;
 }
-.rangeos-dashboard .rangeos-save-status {
-    min-height: 1.5rem;
-    color: var(--rangeos-ink-2);
-    font-size: .8125rem;
+/* The result of an inline save, beside the control that triggered it. It says which
+ * way the save went in words rather than a bare glyph, and carries aria-live so the
+ * outcome is announced - a dropdown that saves on change gives no other confirmation.
+ *
+ * The slot is always laid out, at the width of the longer of the two labels, so the
+ * row doesn't shift as the message comes and goes. Only its opacity changes, which
+ * leaves the message readable to a screen reader while it is on. */
+.rangeos-dashboard .rangeos-save-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 5.75rem;
+    height: 22px;
+    margin-left: .5rem;
+    padding: 0 8px;
+    border-radius: 999px;
+    background-color: var(--rangeos-quiet-bg);
+    color: var(--rangeos-quiet-ink);
+    font-size: .75rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+.rangeos-dashboard .rangeos-save-indicator::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentcolor;
+}
+/* Empty is the resting state, and an empty pill should show nothing at all. */
+.rangeos-dashboard .rangeos-save-indicator:empty {
+    background: none;
+}
+.rangeos-dashboard .rangeos-save-indicator:empty::before {
+    display: none;
+}
+.rangeos-dashboard .rangeos-save-indicator.is-shown {
+    opacity: 1;
+}
+.rangeos-dashboard .rangeos-save-indicator-ok {
+    background-color: var(--rangeos-ok-bg);
+    color: var(--rangeos-ok-ink);
+}
+.rangeos-dashboard .rangeos-save-indicator-bad {
+    background-color: var(--rangeos-bad-bg);
+    color: var(--rangeos-bad-ink);
 }
 .rangeos-dashboard .rangeos-pagination {
     gap: .75rem;
@@ -940,45 +1038,59 @@
     .rangeos-dashboard .rangeos-card-link span,
     .rangeos-dashboard .table > tbody > tr > *,
     .rangeos-dashboard .rangeos-chevron,
+    .rangeos-dashboard .rangeos-save-indicator,
     .rangeos-dashboard .btn {
         transition: none;
     }
 }
 
-/* Dynamic dialogs sit outside the dashboard wrapper, so they carry the same token
- * values in a RangeOS-owned scope rather than borrowing cmi5 component rules. */
+/* Dynamic dialogs are appended to the body, outside the dashboard wrapper, so they
+ * cannot inherit the page's tokens and need a scope of their own.
+ *
+ * cmi5 declares its --c5-* block on .mod-cmi5-library rather than on :root, so a
+ * dialog reaches the palette only by carrying that class itself - which every one of
+ * them does, beside .rangeos-modal (see the modal roots in amd/src/*.js). That makes
+ * these tokens read the same values the page reads, instead of a hand-copied fork
+ * that drifts: the dark stage colour had already drifted two shades from the page's.
+ * Each keeps cmi5's own value as its fallback, so a dialog built without the class
+ * degrades to the right palette rather than to nothing.
+ *
+ * The shadow is deliberately not --c5-shadow: a dialog sits above the page and casts
+ * a heavier one than a panel resting on it. */
 .rangeos-modal {
-    --rangeos-modal-ink: #1b2033;
-    --rangeos-modal-ink-2: #505869;
-    --rangeos-modal-line: #e3e6ec;
-    --rangeos-modal-line-soft: #edeff3;
-    --rangeos-modal-control: #cdd2dc;
-    --rangeos-modal-surface: #fff;
-    --rangeos-modal-sunken: #f8f9fb;
-    --rangeos-modal-stage: #f3f4f7;
-    --rangeos-modal-accent: #43589d;
-    --rangeos-modal-accent-hover: #364a88;
-    --rangeos-modal-accent-tint: #e9edf8;
-    --rangeos-modal-accent-border: #c9d2ee;
-    --rangeos-modal-accent-ink: #2f3f78;
-    --rangeos-modal-on-accent: #fff;
+    --rangeos-modal-ink: var(--c5-ink, #1b2033);
+    --rangeos-modal-ink-2: var(--c5-ink-2, #505869);
+    --rangeos-modal-line: var(--c5-line, #e3e6ec);
+    --rangeos-modal-line-soft: var(--c5-line-soft, #edeff3);
+    --rangeos-modal-control: var(--c5-control-border, #cdd2dc);
+    --rangeos-modal-surface: var(--c5-surface, #fff);
+    --rangeos-modal-sunken: var(--c5-sunken, #f8f9fb);
+    --rangeos-modal-stage: var(--c5-stage, #f3f4f7);
+    --rangeos-modal-accent: var(--c5-accent, #43589d);
+    --rangeos-modal-accent-hover: var(--c5-accent-hover, #364a88);
+    --rangeos-modal-accent-tint: var(--c5-accent-tint, #e9edf8);
+    --rangeos-modal-accent-border: var(--c5-accent-tint-border, #c9d2ee);
+    --rangeos-modal-accent-ink: var(--c5-accent-tint-ink, #2f3f78);
+    --rangeos-modal-on-accent: var(--c5-on-accent, #fff);
     --rangeos-modal-shadow: 0 1px 2px rgb(27 32 51 / 4%), 0 8px 24px rgb(27 32 51 / 12%);
 }
+/* In dark mode cmi5 redefines the same --c5-* names, so only the fallbacks change
+ * here - they are what a dialog without .mod-cmi5-library falls back to. */
 [data-bs-theme=dark] .rangeos-modal {
-    --rangeos-modal-ink: #e6e8ee;
-    --rangeos-modal-ink-2: #b4bac7;
-    --rangeos-modal-line: #353b4a;
-    --rangeos-modal-line-soft: #2c3140;
-    --rangeos-modal-control: #474e60;
-    --rangeos-modal-surface: #1e222b;
-    --rangeos-modal-sunken: #191c24;
-    --rangeos-modal-stage: #262b36;
-    --rangeos-modal-accent: #7795f8;
-    --rangeos-modal-accent-hover: #93aafa;
-    --rangeos-modal-accent-tint: rgb(119 149 248 / 14%);
-    --rangeos-modal-accent-border: rgb(119 149 248 / 38%);
-    --rangeos-modal-accent-ink: #c3cffd;
-    --rangeos-modal-on-accent: #0e1530;
+    --rangeos-modal-ink: var(--c5-ink, #e6e8ee);
+    --rangeos-modal-ink-2: var(--c5-ink-2, #b4bac7);
+    --rangeos-modal-line: var(--c5-line, #353b4a);
+    --rangeos-modal-line-soft: var(--c5-line-soft, #2c3140);
+    --rangeos-modal-control: var(--c5-control-border, #474e60);
+    --rangeos-modal-surface: var(--c5-surface, #1e222b);
+    --rangeos-modal-sunken: var(--c5-sunken, #191c24);
+    --rangeos-modal-stage: var(--c5-stage, #15181e);
+    --rangeos-modal-accent: var(--c5-accent, #7795f8);
+    --rangeos-modal-accent-hover: var(--c5-accent-hover, #93aafa);
+    --rangeos-modal-accent-tint: var(--c5-accent-tint, rgb(119 149 248 / 14%));
+    --rangeos-modal-accent-border: var(--c5-accent-tint-border, rgb(119 149 248 / 38%));
+    --rangeos-modal-accent-ink: var(--c5-accent-tint-ink, #c3cffd);
+    --rangeos-modal-on-accent: var(--c5-on-accent, #0e1530);
     --rangeos-modal-shadow: 0 8px 24px rgb(0 0 0 / 35%);
 }
 .rangeos-modal .modal-content {

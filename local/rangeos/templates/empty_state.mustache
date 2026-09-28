@@ -1,0 +1,45 @@
+{{!
+    @template local_rangeos/empty_state
+
+    What stands where a list's rows would be when there are none.
+
+    An empty area is not news, so it is not an alert: it states the case quietly and, where
+    there is an obvious next step, offers it. The headline says what is missing, the line
+    under it says why or what to do, and the action - a link, or a button the page's own
+    JavaScript picks up - is the thing the reader came to do.
+
+    Build the context with \local_rangeos\output\empty_state so the pages stay in step.
+
+    Context variables required:
+    * title - the headline: what is missing
+    * message - one line on why, or what to do about it
+
+    Optional:
+    * actionlabel - label for the action; required by either action form below
+    * actionurl - render the action as a link to this URL
+    * actiondata - render the action as a button with this data-action value instead
+
+    Example context (json):
+    {
+        "title": "No environments yet",
+        "message": "Add a RangeOS environment to connect this site to a range.",
+        "actionlabel": "Add environment",
+        "actionurl": "/local/rangeos/environment_profiles.php?action=add"
+    }
+}}
+<div class="rangeos-empty-state">
+    <span class="rangeos-empty-state-icon" aria-hidden="true">
+        {{! A tray: the shape of a list with nothing in it. }}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 15h4l1.5 2.5h7L17 15h4"/><path d="M4.5 15 6 5.5h12L19.5 15"/></svg>
+    </span>
+    <p class="rangeos-empty-state-title">{{title}}</p>
+    <p class="rangeos-empty-state-message">{{message}}</p>
+    {{#actionlabel}}
+    {{#actionurl}}
+    <a href="{{actionurl}}" class="btn btn-primary">{{actionlabel}}</a>
+    {{/actionurl}}
+    {{#actiondata}}
+    <button type="button" class="btn btn-primary" data-action="{{actiondata}}">{{actionlabel}}</button>
+    {{/actiondata}}
+    {{/actionlabel}}
+</div>
