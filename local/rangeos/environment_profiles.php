@@ -33,12 +33,17 @@ require_capability('local/rangeos:manageenvironments', $context);
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id = optional_param('id', 0, PARAM_INT);
+$search = trim(optional_param('search', '', PARAM_TEXT));
+
+$pagepath = '/local/rangeos/environment_profiles.php';
+$baseurl = (new moodle_url($pagepath))->out(false);
 
 $PAGE->set_context($context);
-$PAGE->set_url('/local/rangeos/environment_profiles.php', ['action' => $action, 'id' => $id]);
+$PAGE->set_url($pagepath, ['action' => $action, 'id' => $id, 'search' => $search]);
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('environments', 'local_rangeos'));
 $PAGE->set_heading(get_string('environments', 'local_rangeos'));
+$PAGE->requires->js_call_amd('local_rangeos/confirm', 'init');
 
 // Handle delete.
 if ($action === 'delete' && $id && confirm_sesskey()) {
@@ -107,36 +112,53 @@ if ($action === 'edit' || $action === 'add') {
 // Default: list environments.
 $environments = environment_manager::list_environments();
 
+// The search is applied here rather than in SQL: a site has a handful of environments, and
+// list_environments() is what the rest of the plugin reads them through.
+if ($search !== '') {
+    $needle = core_text::strtolower($search);
+    $environments = array_filter($environments, function($env) use ($needle) {
+        return str_contains(core_text::strtolower($env->name), $needle)
+            || str_contains(core_text::strtolower($env->apibaseurl), $needle);
+    });
+}
+
 echo $OUTPUT->header();
 echo \local_rangeos\output\dashboard::start('environment_profiles', 'manageenvironments_desc');
 
-$addurl = new moodle_url('/local/rangeos/environment_profiles.php', ['action' => 'add']);
-echo html_writer::div(
-    html_writer::link($addurl, get_string('addenvironment', 'local_rangeos'), ['class' => 'btn btn-primary']),
-    'rangeos-actions'
-);
-
-if (empty($environments)) {
-    echo $OUTPUT->notification(get_string('noenvironments', 'local_rangeos'), 'info');
-} else {
-    echo $OUTPUT->render_from_template('local_rangeos/environment_profiles', [
-        'environments' => array_values(array_map(function($env) {
-            return [
-                'id' => $env->id,
-                'name' => format_string($env->name),
-                'apibaseurl' => $env->apibaseurl,
-                'isdefault' => (bool) $env->isdefault,
-                'hasprofile' => !empty($env->profileid),
-                'editurl' => (new moodle_url('/local/rangeos/environment_profiles.php',
-                    ['action' => 'edit', 'id' => $env->id]))->out(false),
-                'deleteurl' => (new moodle_url('/local/rangeos/environment_profiles.php',
-                    ['action' => 'delete', 'id' => $env->id, 'sesskey' => sesskey()]))->out(false),
-                'testurl' => (new moodle_url('/local/rangeos/environment_profiles.php',
-                    ['action' => 'test', 'id' => $env->id, 'sesskey' => sesskey()]))->out(false),
-            ];
-        }, $environments)),
-    ]);
-}
+echo $OUTPUT->render_from_template('local_rangeos/environment_profiles', [
+    'environments' => array_values(array_map(function($env) use ($pagepath) {
+        return [
+            'id' => $env->id,
+            'name' => format_string($env->name),
+            'apibaseurl' => $env->apibaseurl,
+            'isdefault' => (bool) $env->isdefault,
+            'hasprofile' => !empty($env->profileid),
+            'editurl' => (new moodle_url($pagepath,
+                ['action' => 'edit', 'id' => $env->id]))->out(false),
+            'deleteurl' => (new moodle_url($pagepath,
+                ['action' => 'delete', 'id' => $env->id, 'sesskey' => sesskey()]))->out(false),
+            'testurl' => (new moodle_url($pagepath,
+                ['action' => 'test', 'id' => $env->id, 'sesskey' => sesskey()]))->out(false),
+        ];
+    }, $environments)),
+    'hasenvironments' => !empty($environments),
+    'rowsummary' => get_string('environments_count', 'local_rangeos', count($environments)),
+    'search' => $search,
+    'hasfilters' => ($search !== ''),
+    'addurl' => (new moodle_url($pagepath, ['action' => 'add']))->out(false),
+    'baseurl' => $baseurl,
+    // Nothing configured at all is a different case from a search that matched nothing:
+    // one offers the page that fixes it, the other offers to clear the search.
+    'emptyrows' => $search !== ''
+        ? \local_rangeos\output\empty_state::build('noenvironmentsmatch', [
+            'label' => 'clearfilters',
+            'url' => new moodle_url($pagepath),
+        ])
+        : \local_rangeos\output\empty_state::build('noenvironments', [
+            'label' => 'addenvironment',
+            'url' => new moodle_url($pagepath, ['action' => 'add']),
+        ]),
+]);
 
 echo \local_rangeos\output\dashboard::end();
 echo $OUTPUT->footer();

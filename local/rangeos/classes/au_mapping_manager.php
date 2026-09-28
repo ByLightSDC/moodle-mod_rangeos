@@ -225,7 +225,7 @@ class au_mapping_manager {
                 if (!isset($groupindex[$key])) {
                     $groupindex[$key] = \count($grouped);
                     $grouped[] = [
-                        'coursename' => $cn !== '' ? $cn : 'No local course',
+                        'coursename' => $cn !== '' ? $cn : get_string('nolocalcourse', 'local_rangeos'),
                         'courseid'   => $entry['courseid'] ?? 0,
                         'hascourse'  => ($cn !== ''),
                         'items'      => [],

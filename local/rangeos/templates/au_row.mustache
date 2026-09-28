@@ -1,0 +1,201 @@
+{{!
+    @template local_rangeos/au_row
+
+    One AU in a mapping list: a condensed row that the list is scanned by, plus the rest
+    of its detail opened in place underneath.
+
+    Shared by the library listing and the per-activity view so both present an AU the same
+    way. The row leads with the title and carries the IRI as secondary text, because the
+    IRI is long and nobody scans by it. Every detail beyond the title, the IRI and the
+    scenarios is optional: a page supplies the flags for the parts it actually knows
+    about, and the rest simply do not render.
+
+    Context variables required:
+    * rowid - id of the toggle button; the detail region points back at it
+    * detailid - id of the detail row this toggle controls
+    * auid - the AU IRI
+    * title - the AU title
+    * canmap - the AU can carry a scenario mapping, so it gets a scenario cell and actions
+    * ismapped - a mapping already exists
+    * scenario_count - how many scenarios are mapped
+    * scenario_badges - the mapped scenario names
+    * scenarios_json - the mapped scenarios as [{id, name}], for the edit dialog
+    * mapping_name - the existing mapping's name, used as the dialog's default
+
+    Optional:
+    * israngeos - flag the AU as RangeOS-flavoured
+    * showpackage - print the package name above the title (library, unfiltered)
+    * showpackagedetail - list the package in the detail instead (library, filtered)
+    * packagetitle - the package name, with either of the two flags above
+    * hasstatus - include a mapped/unmapped pill in the detail
+    * scenarioname - a default scenario declared in the AU's RC5 config
+    * defaultscenariomissing - that default is not present in the chosen environment
+    * showactivities / hasactivities / activities - local activities using this AU
+    * hasclassmode / classmode - the class-mode switch
+
+    Example context (json):
+    {
+        "rowid": "rangeos-au-0", "detailid": "rangeos-au-detail-0",
+        "auid": "https://example.com/au/1", "title": "Recon Basics",
+        "canmap": true, "ismapped": true, "scenario_count": 1,
+        "scenario_badges": ["Recon Range"], "scenarios_json": "[]",
+        "mapping_name": "Recon Basics", "hasstatus": true
+    }
+}}
+<tr class="rangeos-au-row">
+    <td>
+        <button type="button" class="rangeos-au-toggle" id="{{rowid}}"
+                data-action="toggle-au-detail"
+                aria-expanded="false" aria-controls="{{detailid}}">
+            {{> local_rangeos/icon_chevron }}
+            <span class="rangeos-au-text">
+                {{#showpackage}}
+                <span class="rangeos-au-package">{{packagetitle}}</span>
+                {{/showpackage}}
+                <span class="rangeos-au-titleline">
+                    <span class="rangeos-au-title">{{title}}</span>
+                    {{#israngeos}}
+                    <span class="rangeos-tag rangeos-tag-accent">RangeOS</span>
+                    {{/israngeos}}
+                </span>
+                <code class="rangeos-auid">{{auid}}</code>
+            </span>
+        </button>
+    </td>
+    <td class="rangeos-au-col-scenario">
+        {{#canmap}}
+            {{#scenario_count}}
+            <ul class="rangeos-scenario-list">
+                {{#scenario_badges}}
+                <li>{{.}}</li>
+                {{/scenario_badges}}
+            </ul>
+            {{/scenario_count}}
+            {{^scenario_count}}
+            <span class="rangeos-tag rangeos-tag-empty">{{#str}}none, local_rangeos{{/str}}</span>
+            {{/scenario_count}}
+        {{/canmap}}
+        {{^canmap}}
+        <span class="text-muted">&mdash;</span>
+        {{/canmap}}
+    </td>
+</tr>
+<tr class="rangeos-au-detailrow" id="{{detailid}}" hidden>
+    <td colspan="2">
+        {{! role=region belongs on a real element, not on the row: a tr with a landmark
+            role stops being a table row for assistive technology. }}
+        <div role="region" aria-labelledby="{{rowid}}">
+            <dl class="rangeos-detail-grid">
+                {{#showpackagedetail}}
+                <dt>{{#str}}cmi5package, local_rangeos{{/str}}</dt>
+                <dd>{{packagetitle}}</dd>
+                {{/showpackagedetail}}
+
+                <dt>{{#str}}type, local_rangeos{{/str}}</dt>
+                <dd>
+                    <span class="rangeos-tag">cmi5</span>
+                    {{#israngeos}}<span class="rangeos-tag rangeos-tag-accent">RangeOS</span>{{/israngeos}}
+                </dd>
+
+                {{#hasstatus}}
+                <dt>{{#str}}status, local_rangeos{{/str}}</dt>
+                <dd>
+                    {{#ismapped}}
+                    <span class="rangeos-pill rangeos-pill-ok">{{#str}}mapped, local_rangeos{{/str}}</span>
+                    {{/ismapped}}
+                    {{^ismapped}}
+                    <span class="rangeos-pill rangeos-pill-warn">{{#str}}unmapped, local_rangeos{{/str}}</span>
+                    {{/ismapped}}
+                </dd>
+                {{/hasstatus}}
+
+                {{#scenarioname}}
+                <dt>{{#str}}defaultscenario, local_rangeos{{/str}}</dt>
+                <dd>
+                    {{scenarioname}}
+                    {{#defaultscenariomissing}}
+                    <span class="rangeos-pill rangeos-pill-warn">{{#str}}defaultscenario_missing, local_rangeos{{/str}}</span>
+                    {{/defaultscenariomissing}}
+                </dd>
+                {{/scenarioname}}
+
+                {{#showactivities}}
+                <dt>{{#str}}activity, local_rangeos{{/str}}</dt>
+                <dd>
+                    {{#hasactivities}}
+                    {{#activities}}
+                    <div>
+                        <a href="{{{config.wwwroot}}}/mod/cmi5/view.php?id={{cmid}}">{{activityname}}</a>
+                        <span class="text-muted">({{coursename}})</span>
+                    </div>
+                    {{/activities}}
+                    {{/hasactivities}}
+                    {{^hasactivities}}
+                    <span class="text-muted">&mdash;</span>
+                    {{/hasactivities}}
+                </dd>
+                {{/showactivities}}
+
+                {{#hasclassmode}}
+                <dt>{{#str}}classmode, local_rangeos{{/str}}</dt>
+                <dd>
+                    {{#canmap}}
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input"
+                               id="classmode-{{rowid}}"
+                               data-action="toggle-classmode"
+                               data-auid="{{auid}}"
+                               {{#classmode}}checked{{/classmode}}>
+                        <label class="custom-control-label" for="classmode-{{rowid}}"></label>
+                    </div>
+                    {{/canmap}}
+                    {{^canmap}}
+                    <span class="text-muted">&mdash;</span>
+                    {{/canmap}}
+                </dd>
+                {{/hasclassmode}}
+            </dl>
+
+            {{#canmap}}
+            {{#canmanage}}
+            <div class="rangeos-detail-actions">
+                {{#ismapped}}
+                <button class="btn btn-outline-primary"
+                        data-action="edit-mapping"
+                        data-auid="{{auid}}"
+                        data-autitle="{{mapping_name}}"
+                        data-scenarios="{{scenarios_json}}">
+                    {{#str}}editmapping, local_rangeos{{/str}}
+                </button>
+                {{/ismapped}}
+                {{^ismapped}}
+                {{#scenarioname}}
+                {{^defaultscenariomissing}}
+                <button class="btn btn-primary"
+                        data-action="create-default-mapping"
+                        data-auid="{{auid}}"
+                        data-autitle="{{title}}"
+                        data-defaultscenarioname="{{scenarioname}}">
+                    {{#str}}usedefault, local_rangeos{{/str}}
+                </button>
+                {{/defaultscenariomissing}}
+                {{/scenarioname}}
+                <button class="btn btn-outline-primary"
+                        data-action="create-mapping"
+                        data-auid="{{auid}}"
+                        data-autitle="{{title}}"
+                        data-scenarios="[]">
+                    {{#str}}createmapping, local_rangeos{{/str}}
+                </button>
+                {{#defaultscenariomissing}}
+                <span class="rangeos-detail-actions-note">
+                    {{#str}}usedefault_unavailable, local_rangeos, {{scenarioname}}{{/str}}
+                </span>
+                {{/defaultscenariomissing}}
+                {{/ismapped}}
+            </div>
+            {{/canmanage}}
+            {{/canmap}}
+        </div>
+    </td>
+</tr>

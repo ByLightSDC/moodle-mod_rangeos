@@ -7,9 +7,9 @@
 }}
 <div>
     {{^hasenvironments}}
-    <div class="alert alert-warning">
-        {{#str}}noenvironments, local_rangeos{{/str}}
-    </div>
+    {{#emptyenvironments}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyenvironments}}
     {{/hasenvironments}}
 
     {{#hasenvironments}}
@@ -27,7 +27,7 @@
                        autocomplete="off">
             </div>
             <button type="submit" class="btn btn-outline-primary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+                {{> local_rangeos/icon_search }}
                 {{#str}}search{{/str}}
             </button>
             {{#hasfilters}}
@@ -75,7 +75,7 @@
                         <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
                         {{/envoptions}}
                     </select>
-                    <span class="rangeos-save-indicator ml-2" style="display:none;"></span>
+                    <span class="rangeos-save-indicator" role="status" aria-live="polite"></span>
                 </td>
             </tr>
             {{/activities}}
@@ -85,14 +85,9 @@
     {{/hasactivities}}
 
     {{^hasactivities}}
-    <div class="alert alert-info rangeos-empty-state">
-        {{#hasfilters}}
-        {{#str}}noactivitiesmatch, local_rangeos{{/str}}
-        {{/hasfilters}}
-        {{^hasfilters}}
-        {{#str}}noactivities, local_rangeos{{/str}}
-        {{/hasfilters}}
-    </div>
+    {{#emptyrows}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyrows}}
     {{/hasactivities}}
 
     {{/hasenvironments}}

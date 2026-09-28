@@ -1,6 +1,10 @@
 {{!
     Per-activity AU mapping view.
 
+    The rows are local_rangeos/au_row, the same component the library listing uses, so an
+    AU reads the same way wherever it is shown: title first, IRI as secondary text, and
+    everything else opened in place. See that template for the row's context.
+
     @template   local_rangeos/activity_au_mappings
     @copyright  2026 Bylight
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -19,65 +23,37 @@
     {{/haserror}}
 
     {{#hasaus}}
+    <p class="rangeos-result-count">{{rowsummary}}</p>
     <div class="table-responsive rangeos-table-panel">
-    <table class="table table-striped">
+    <table class="table rangeos-au-table">
         <thead>
             <tr>
-                <th>{{#str}}au_iri, local_rangeos{{/str}}</th>
                 <th>{{#str}}au_title, local_rangeos{{/str}}</th>
-                <th>{{#str}}status, local_rangeos{{/str}}</th>
-                <th>{{#str}}scenarios, local_rangeos{{/str}}</th>
-                {{#canmanage}}
-                <th>{{#str}}actions{{/str}}</th>
-                {{/canmanage}}
+                <th class="rangeos-au-col-scenario">{{#str}}scenarios, local_rangeos{{/str}}</th>
             </tr>
         </thead>
         <tbody>
             {{#aus}}
-            <tr>
-                <td><code title="{{auid}}">{{auid}}</code></td>
-                <td>{{title}}</td>
-                <td>
-                    {{#has_mapping}}
-                    <span class="rangeos-pill rangeos-pill-ok">{{#str}}mapped, local_rangeos{{/str}}</span>
-                    {{/has_mapping}}
-                    {{^has_mapping}}
-                    <span class="rangeos-pill rangeos-pill-warn">{{#str}}unmapped, local_rangeos{{/str}}</span>
-                    {{/has_mapping}}
-                </td>
-                <td>{{scenarios_display}}</td>
-                {{#canmanage}}
-                <td class="rangeos-row-actions">
-                    {{#has_mapping}}
-                    <button class="btn btn-sm btn-outline-primary"
-                            data-action="edit-mapping"
-                            data-auid="{{auid}}"
-                            data-autitle="{{title}}">
-                        {{#str}}edit{{/str}}
-                    </button>
-                    {{/has_mapping}}
-                    {{^has_mapping}}
-                    <button class="btn btn-sm btn-outline-success"
-                            data-action="create-mapping"
-                            data-auid="{{auid}}"
-                            data-autitle="{{title}}">
-                        {{#str}}createmapping, local_rangeos{{/str}}
-                    </button>
-                    {{/has_mapping}}
-                </td>
-                {{/canmanage}}
-            </tr>
+            {{> local_rangeos/au_row }}
             {{/aus}}
         </tbody>
     </table>
     </div>
     {{/hasaus}}
 
+    {{^hasenvironments}}
+    {{#emptyenvironments}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyenvironments}}
+    {{/hasenvironments}}
+
+    {{#hasenvironments}}
     {{^hasaus}}
     {{^haserror}}
-    <div class="alert alert-info rangeos-empty-state">
-        {{#str}}noaus, local_rangeos{{/str}}
-    </div>
+    {{#emptyrows}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyrows}}
     {{/haserror}}
     {{/hasaus}}
+    {{/hasenvironments}}
 </div>

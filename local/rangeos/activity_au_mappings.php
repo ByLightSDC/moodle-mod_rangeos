@@ -90,22 +90,46 @@ foreach ($environments as $env) {
 
 $canmanage = has_capability('local/rangeos:manageaumappings', context_system::instance());
 
+// Rows for local_rangeos/au_row, the component the library listing uses.
+//
+// The mapping API stores scenarios as bare UUIDs, sometimes alongside a name. Whatever
+// name it carries is used, falling back to the UUID; the mapping dialog replaces those
+// with catalog names as soon as a search runs, so no extra API call is made here.
 $audata = [];
 foreach ($aus as $au) {
-    $scenarios = '';
-    if (!empty($au['mapping']['scenarios'])) {
-        $names = array_map(function($s) {
-            return is_array($s) ? ($s['name'] ?? '') : (string) $s;
-        }, $au['mapping']['scenarios']);
-        $scenarios = implode(', ', $names);
+    $scenariobadges = [];
+    $scenariooptions = [];
+    foreach ($au['mapping']['scenarios'] ?? [] as $s) {
+        if (is_array($s)) {
+            $uuid = $s['uuid'] ?? $s['scenarioId'] ?? $s['id'] ?? '';
+            $name = $s['name'] ?? '';
+        } else {
+            $uuid = (string) $s;
+            $name = '';
+        }
+        $scenariobadges[] = $name ?: $uuid;
+        if ($uuid !== '') {
+            $scenariooptions[] = ['id' => $uuid, 'name' => $name ?: $uuid];
+        }
     }
 
+    // Stable ids so the row's toggle can point at its own detail region. The AU IRI
+    // itself can't be one: it carries slashes and colons.
+    $rowindex = count($audata);
+
     $audata[] = [
+        'rowid' => 'rangeos-au-' . $rowindex,
+        'detailid' => 'rangeos-au-detail-' . $rowindex,
         'auid' => $au['auid'],
         'title' => $au['title'],
-        'has_mapping' => $au['has_mapping'],
-        'scenarios_display' => $scenarios,
-        'canmanage' => $canmanage,
+        // Every AU in a cmi5 activity is a mapping candidate; the library has to read
+        // config.json to tell, which this page does not do.
+        'canmap' => true,
+        'ismapped' => $au['has_mapping'],
+        'scenario_badges' => $scenariobadges,
+        'scenario_count' => count($scenariobadges),
+        'scenarios_json' => json_encode($scenariooptions),
+        'mapping_name' => $au['mapping']['name'] ?? $au['title'],
     ];
 }
 
@@ -118,9 +142,16 @@ echo $OUTPUT->render_from_template('local_rangeos/activity_au_mappings', [
     'envid' => $envid,
     'aus' => $audata,
     'hasaus' => !empty($audata),
+    'rowsummary' => get_string('aumapping_count', 'local_rangeos', count($audata)),
     'error' => $error,
     'haserror' => !empty($error),
     'canmanage' => $canmanage,
+    // The row's optional parts. This view is already inside one activity, and it reads no
+    // package or config.json, so the package, activity and class-mode detail stay off; the
+    // status pill is on, because a flat Status column was what this page used to show.
+    'hasstatus' => true,
+    'emptyenvironments' => \local_rangeos\output\empty_state::no_environments(),
+    'emptyrows' => \local_rangeos\output\empty_state::build('noaus'),
     'backurl' => $settingsurl->out(false),
     'baseurl' => (new moodle_url('/local/rangeos/activity_au_mappings.php', ['cmid' => $cmid]))->out(false),
 ]);

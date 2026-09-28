@@ -61,6 +61,7 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('library_aumappings', 'local_rangeos'));
 $PAGE->set_heading(get_string('library_aumappings', 'local_rangeos'));
 $PAGE->requires->js_call_amd('local_rangeos/au_mappings', 'init');
+$PAGE->requires->js_call_amd('local_rangeos/confirm', 'init');
 
 $environments = environment_manager::list_environments();
 
@@ -287,6 +288,9 @@ foreach ($aus as $au) {
         'auid' => $au->auid,
         'title' => $au->title,
         'israngeos' => $israngeos,
+        // Only a RangeOS AU can carry a scenario mapping, so it alone gets the scenario
+        // cell and the mapping actions.
+        'canmap' => $israngeos,
         'scenarioname' => $scenarioname,
         'defaultscenariomissing' => $defaultscenariomissing,
         'ismapped' => !empty($scenarios),
@@ -329,7 +333,19 @@ echo $OUTPUT->render_from_template('local_rangeos/library_au_mappings', [
         'total' => $totalitems,
     ]),
     'hasselectedpackage' => ($packageid > 0),
-    'showpackagecolumn' => ($packageid === 0),
+    // The row's optional parts. With no project filter the package name leads each row;
+    // once one is chosen the whole list is that package, so it moves into the detail.
+    'showpackage' => ($packageid === 0),
+    'showpackagedetail' => ($packageid > 0),
+    'showactivities' => true,
+    'hasclassmode' => ($packageid > 0),
+    // The page already requires local/rangeos:manageaumappings.
+    'canmanage' => true,
+    'emptyenvironments' => \local_rangeos\output\empty_state::no_environments(),
+    'emptyrows' => \local_rangeos\output\empty_state::build('nolibraryaus', $packageid > 0 ? [
+        'label' => 'clearfilters',
+        'url' => new moodle_url('/local/rangeos/library_au_mappings.php', ['envid' => $envid]),
+    ] : []),
     'error' => $error,
     'haserror' => !empty($error),
     'baseurl' => $baseurl,

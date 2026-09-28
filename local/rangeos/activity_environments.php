@@ -156,6 +156,15 @@ echo $OUTPUT->render_from_template('local_rangeos/activity_environments', [
         'last' => min(($currentpage + 1) * $pagesize, $totalitems),
         'total' => $totalitems,
     ]),
+    'emptyenvironments' => \local_rangeos\output\empty_state::no_environments(),
+    // Two different empty lists: nothing deployed at all, or nothing matching the filters,
+    // in which case clearing them is the way out.
+    'emptyrows' => ($envfilter !== 0 || $search !== '')
+        ? \local_rangeos\output\empty_state::build('noactivitiesmatch', [
+            'label' => 'clearfilters',
+            'url' => new moodle_url($pagepath),
+        ])
+        : \local_rangeos\output\empty_state::build('noactivities'),
     'baseurl' => $baseurl,
 ]);
 

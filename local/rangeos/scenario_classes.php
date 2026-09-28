@@ -106,6 +106,13 @@ echo $OUTPUT->render_from_template('local_rangeos/scenario_classes', [
     'hasclasses' => !empty($classdata),
     'error' => $error,
     'haserror' => !empty($error),
+    'emptyenvironments' => \local_rangeos\output\empty_state::no_environments(),
+    // The action is the page's own Create class button, which its JavaScript picks up by
+    // data-action - the same handler the button above the list uses.
+    'emptyrows' => \local_rangeos\output\empty_state::build('noclasses', [
+        'label' => 'createclass',
+        'data' => 'create-class',
+    ]),
     'baseurl' => $baseurl,
 ]);
 

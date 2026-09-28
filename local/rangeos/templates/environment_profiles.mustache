@@ -1,56 +1,104 @@
 {{!
-    Environment profiles listing template.
+    Environment profiles listing page.
+
+    Laid out like the other management pages: a filter toolbar, the primary action, a row
+    count, then the list. This page has no environment selector - it is the list of
+    environments - so the toolbar holds a name search instead, which keeps the same bar in
+    the same place as the pages either side of it.
 
     @template   local_rangeos/environment_profiles
     @copyright  2026 Bylight
     @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
 }}
-<div class="table-responsive rangeos-table-panel">
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>{{#str}}name{{/str}}</th>
-            <th>{{#str}}apibaseurl, local_rangeos{{/str}}</th>
-            <th>{{#str}}isdefault, local_rangeos{{/str}}</th>
-            <th>{{#str}}status{{/str}}</th>
-            <th>{{#str}}actions{{/str}}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{#environments}}
-        <tr>
-            <td>{{name}}</td>
-            <td><code>{{apibaseurl}}</code></td>
-            <td>
-                {{#isdefault}}
-                    <span class="rangeos-pill rangeos-pill-ok">{{#str}}default{{/str}}</span>
-                {{/isdefault}}
-                {{^isdefault}}
-                    <span class="text-muted">&mdash;</span>
-                {{/isdefault}}
-            </td>
-            <td>
-                {{#hasprofile}}
-                    <span class="rangeos-pill rangeos-pill-info">{{#str}}active{{/str}}</span>
-                {{/hasprofile}}
-                {{^hasprofile}}
-                    <span class="rangeos-pill rangeos-pill-warn">No profile</span>
-                {{/hasprofile}}
-            </td>
-            <td class="rangeos-row-actions">
-                <a href="{{editurl}}" class="btn btn-sm btn-outline-primary">
-                    {{#str}}edit{{/str}}
-                </a>
-                <a href="{{testurl}}" class="btn btn-sm btn-outline-secondary">
-                    {{#str}}testconnection, local_rangeos{{/str}}
-                </a>
-                <a href="{{deleteurl}}" class="btn btn-sm btn-outline-danger"
-                   onclick="return confirm('{{#str}}deleteenvironment_confirm, local_rangeos, {{name}}{{/str}}');">
-                    {{#str}}delete{{/str}}
-                </a>
-            </td>
-        </tr>
-        {{/environments}}
-    </tbody>
-</table>
+<div>
+    <form id="rangeos-environment-search-form" class="rangeos-toolbar" action="{{baseurl}}" method="get">
+        <div class="rangeos-toolbar-group">
+            <div class="rangeos-field rangeos-field-grow">
+                <label for="rangeos-environment-search">{{#str}}searchenvironments, local_rangeos{{/str}}</label>
+                <input type="search"
+                       id="rangeos-environment-search"
+                       name="search"
+                       class="form-control"
+                       value="{{search}}"
+                       placeholder="{{#str}}searchenvironments_placeholder, local_rangeos{{/str}}"
+                       autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-outline-primary">
+                {{> local_rangeos/icon_search }}
+                {{#str}}search{{/str}}
+            </button>
+            {{#hasfilters}}
+            <a href="{{baseurl}}" class="btn btn-outline-secondary">
+                {{#str}}clearfilters, local_rangeos{{/str}}
+            </a>
+            {{/hasfilters}}
+        </div>
+    </form>
+
+    {{! With no environments the empty state carries this action instead. }}
+    {{#hasenvironments}}
+    <div class="rangeos-actions">
+        <a href="{{addurl}}" class="btn btn-primary">{{#str}}addenvironment, local_rangeos{{/str}}</a>
+    </div>
+
+    <p class="rangeos-result-count">{{rowsummary}}</p>
+    <div class="table-responsive rangeos-table-panel">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{{#str}}name{{/str}}</th>
+                <th>{{#str}}apibaseurl, local_rangeos{{/str}}</th>
+                <th>{{#str}}isdefault, local_rangeos{{/str}}</th>
+                <th>{{#str}}status{{/str}}</th>
+                <th>{{#str}}actions{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#environments}}
+            <tr>
+                <td>{{name}}</td>
+                <td><code>{{apibaseurl}}</code></td>
+                <td>
+                    {{#isdefault}}
+                        <span class="rangeos-pill rangeos-pill-ok">{{#str}}default{{/str}}</span>
+                    {{/isdefault}}
+                    {{^isdefault}}
+                        <span class="text-muted">&mdash;</span>
+                    {{/isdefault}}
+                </td>
+                <td>
+                    {{#hasprofile}}
+                        <span class="rangeos-pill rangeos-pill-info">{{#str}}active{{/str}}</span>
+                    {{/hasprofile}}
+                    {{^hasprofile}}
+                        <span class="rangeos-pill rangeos-pill-warn">{{#str}}noprofile, local_rangeos{{/str}}</span>
+                    {{/hasprofile}}
+                </td>
+                <td class="rangeos-row-actions">
+                    <a href="{{editurl}}" class="btn btn-sm btn-outline-primary">
+                        {{#str}}edit{{/str}}
+                    </a>
+                    <a href="{{testurl}}" class="btn btn-sm btn-outline-secondary">
+                        {{#str}}testconnection, local_rangeos{{/str}}
+                    </a>
+                    <a href="{{deleteurl}}" class="btn btn-sm btn-outline-danger"
+                       data-rangeos-confirm="deleteenvironment_confirm"
+                       data-rangeos-confirm-title="deleteenvironment_confirmtitle"
+                       data-rangeos-confirm-param="{{name}}"
+                       data-rangeos-confirm-destructive>
+                        {{#str}}delete{{/str}}
+                    </a>
+                </td>
+            </tr>
+            {{/environments}}
+        </tbody>
+    </table>
+    </div>
+    {{/hasenvironments}}
+
+    {{^hasenvironments}}
+    {{#emptyrows}}
+    {{> local_rangeos/empty_state }}
+    {{/emptyrows}}
+    {{/hasenvironments}}
 </div>
