@@ -20,7 +20,7 @@ $plugin->component = 'local_rangeos';
 $plugin->version = 2026092711;
 $plugin->requires = 2024100700; // Moodle 4.5+.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.5.0';
+$plugin->release = '0.6.0';
 $plugin->dependencies = [
     'mod_cmi5' => 2026022601,
 ];
