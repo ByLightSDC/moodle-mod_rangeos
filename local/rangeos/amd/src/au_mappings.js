@@ -175,41 +175,41 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
         : await getString('createmapping', 'local_rangeos');
 
     const defaultHint = defaultScenarioName
-        ? `<div class="alert alert-info py-2 mb-2">
-               <small>Default scenario from course config: <strong>${escapeHtml(defaultScenarioName)}</strong></small>
-           </div>`
+        ? `<p class="rangeos-modal-hint">Default scenario from course config:
+               <strong>${escapeHtml(defaultScenarioName)}</strong></p>`
         : '';
 
     const selectedScenarios = parseSelectedScenarios(existingScenarios);
 
     // Create a container div for the form.
     const container = document.createElement('div');
+    container.className = 'rangeos-modal-form';
     container.innerHTML = `
-        <div class="form-group">
-            <div class="font-weight-bold">AU ID (IRI)</div>
-            <div class="form-control-plaintext"><code class="text-break">${escapeHtml(auId)}</code></div>
-        </div>
-        <div class="form-group">
+        <div class="rangeos-modal-field">
             <label for="mapping-name">Name</label>
             <input type="text" class="form-control" id="mapping-name"
                    value="${escapeAttr(auTitle)}">
+            <p class="rangeos-modal-auid">
+                <span class="rangeos-modal-auid-label">AU ID</span>
+                <code>${escapeHtml(auId)}</code>
+            </p>
         </div>
-        <div class="form-group">
-            <label for="mapping-scenario-search">Scenarios</label>
+        <div class="rangeos-modal-field rangeos-modal-field-grow">
             ${defaultHint}
-            <div class="input-group mb-2">
+            <div class="rangeos-modal-selectedrow">
+                <span class="rangeos-modal-label">Scenarios</span>
+                <div id="mapping-selected-scenarios" class="rangeos-modal-selected"></div>
+            </div>
+            <div class="rangeos-modal-search">
+                <label class="sr-only visually-hidden" for="mapping-scenario-search">Search scenarios</label>
                 <input type="search" class="form-control" id="mapping-scenario-search"
                        placeholder="Search scenarios by name..." autocomplete="off">
-                <div class="input-group-append">
-                    <button type="button" class="btn btn-outline-secondary" id="mapping-scenario-search-btn">
-                        Search
-                    </button>
-                </div>
+                <button type="button" class="btn btn-outline-secondary" id="mapping-scenario-search-btn">
+                    Search
+                </button>
             </div>
-            <div id="mapping-scenario-results" class="list-group mb-2"
-                 style="max-height: 360px; overflow-y: auto;"></div>
-            <div id="mapping-scenario-pagination" class="mb-3"></div>
-            <div id="mapping-selected-scenarios"></div>
+            <div id="mapping-scenario-results" class="list-group rangeos-scenario-results"></div>
+            <div id="mapping-scenario-pagination" class="rangeos-scenario-paging"></div>
         </div>
     `;
 
@@ -224,7 +224,8 @@ const showMappingForm = async(auId, auTitle, existingScenarios, isEdit, defaultS
                     </div>
                     <div class="modal-body" id="${modalId}-body"></div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="${modalId}-cancel">Cancel</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-dismiss="modal" id="${modalId}-cancel">Cancel</button>
                         <button type="button" class="btn btn-primary" id="${modalId}-save">Save</button>
                     </div>
                 </div>
@@ -508,18 +509,15 @@ const renderScenarioPagination = (modalEl, searchState, total, selectedScenarios
         searchScenarios(modalEl, searchState, selectedScenarios);
     };
 
-    const summary = document.createElement('small');
-    summary.className = 'text-muted';
+    const summary = document.createElement('span');
+    summary.className = 'rangeos-page-summary';
     summary.textContent = `Page ${searchState.page + 1} of ${pageCount} · ${total} scenarios`;
 
-    const controls = document.createElement('div');
-    controls.className = 'd-flex justify-content-between align-items-center';
-    controls.appendChild(createPageButton('Previous', searchState.page === 0, () => goToPage(searchState.page - 1)));
-    controls.appendChild(summary);
-    controls.appendChild(
+    container.appendChild(createPageButton('Previous', searchState.page === 0, () => goToPage(searchState.page - 1)));
+    container.appendChild(summary);
+    container.appendChild(
         createPageButton('Next', searchState.page >= pageCount - 1, () => goToPage(searchState.page + 1))
     );
-    container.appendChild(controls);
 };
 
 /**
@@ -533,7 +531,7 @@ const renderScenarioPagination = (modalEl, searchState, total, selectedScenarios
 const createPageButton = (label, disabled, onClick) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'btn btn-sm btn-outline-secondary';
+    button.className = 'btn btn-sm btn-outline-secondary rangeos-page-btn';
     button.textContent = label;
     button.disabled = disabled;
     button.addEventListener('click', onClick);
@@ -564,14 +562,13 @@ const renderSelectedScenarios = (modalEl, selectedScenarios) => {
     const selectedContainer = modalEl.querySelector('#mapping-selected-scenarios');
     selectedContainer.innerHTML = '';
     if (selectedScenarios.length === 0) {
-        selectedContainer.innerHTML = '<small class="text-muted">No scenarios selected.</small>';
+        selectedContainer.innerHTML = '<span class="rangeos-modal-empty">No scenarios selected.</span>';
         return;
     }
 
-    const label = document.createElement('div');
-    label.className = 'small font-weight-bold mb-1';
-    label.textContent = 'Selected scenarios';
-    selectedContainer.appendChild(label);
+    const chips = document.createElement('div');
+    chips.className = 'rangeos-chip-list';
+    selectedContainer.appendChild(chips);
 
     selectedScenarios.forEach((scenario) => {
         const badge = document.createElement('span');
@@ -595,7 +592,7 @@ const renderSelectedScenarios = (modalEl, selectedScenarios) => {
         });
 
         badge.appendChild(remove);
-        selectedContainer.appendChild(badge);
+        chips.appendChild(badge);
     });
 };
 

@@ -698,6 +698,12 @@
     background-color: var(--rangeos-accent-tint);
     color: var(--rangeos-accent-tint-ink);
 }
+/* Same guard on the pages; see the note in the dialog block below. */
+.rangeos-dashboard .btn.btn-secondary {
+    border-color: var(--rangeos-control-border) !important;
+    background-color: var(--rangeos-surface) !important;
+    color: var(--rangeos-ink) !important;
+}
 .rangeos-dashboard .btn-outline-secondary,
 .rangeos-dashboard .btn-secondary {
     border-color: var(--rangeos-control-border);
@@ -976,6 +982,9 @@
     --rangeos-modal-shadow: 0 8px 24px rgb(0 0 0 / 35%);
 }
 .rangeos-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 2rem);
     overflow: hidden;
     border: 1px solid var(--rangeos-modal-line);
     border-radius: 14px;
@@ -985,9 +994,16 @@
 }
 .rangeos-modal .modal-header,
 .rangeos-modal .modal-footer {
-    padding: 1rem 1.25rem;
+    padding: .875rem 1.25rem;
     border-color: var(--rangeos-modal-line-soft);
     background-color: var(--rangeos-modal-sunken);
+}
+.rangeos-modal .modal-footer {
+    gap: .5rem;
+}
+.rangeos-modal .modal-footer > .btn {
+    margin: 0;
+    min-width: 5.5rem;
 }
 .rangeos-modal .modal-title {
     font-size: 1.125rem;
@@ -997,6 +1013,25 @@
 .rangeos-modal .modal-body {
     padding: 1.25rem;
     font-size: .875rem;
+}
+/* Header and footer are pinned and the body is the only thing that scrolls, so
+ * Cancel and Save are always reachable. A flex child won't shrink below its
+ * content - and so won't scroll - without min-height: 0. */
+.rangeos-modal .modal-dialog {
+    margin: 1rem auto;
+    max-height: calc(100vh - 2rem);
+}
+.rangeos-modal .modal-header,
+.rangeos-modal .modal-footer {
+    flex: 0 0 auto;
+}
+.rangeos-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 .rangeos-modal label {
     font-size: .8125rem;
@@ -1038,27 +1073,42 @@
     outline-offset: 2px;
     box-shadow: none;
 }
+/* The dialog's buttons are the page's buttons: an accent tint for the action
+ * that commits, neutral for the one that backs out. A solid fill here read as a
+ * different control set to the one behind the dialog. */
 .rangeos-modal .btn-primary,
 .rangeos-modal .btn-success {
-    border-color: var(--rangeos-modal-accent);
-    background-color: var(--rangeos-modal-accent);
-    box-shadow: 0 1px 2px rgb(16 24 40 / 8%);
-    color: var(--rangeos-modal-on-accent);
+    border-color: var(--rangeos-modal-accent-border);
+    background-color: var(--rangeos-modal-accent-tint);
+    box-shadow: none;
+    color: var(--rangeos-modal-accent-ink);
 }
 .rangeos-modal .btn-primary:hover,
-.rangeos-modal .btn-success:hover {
-    border-color: var(--rangeos-modal-accent-hover);
-    background-color: var(--rangeos-modal-accent-hover);
-    color: var(--rangeos-modal-on-accent);
+.rangeos-modal .btn-primary:focus,
+.rangeos-modal .btn-success:hover,
+.rangeos-modal .btn-success:focus {
+    border-color: var(--rangeos-modal-accent);
+    background-color: var(--rangeos-modal-accent-tint);
+    color: var(--rangeos-modal-accent-ink);
+}
+/* The theme sets [data-bs-theme=dark] .btn-secondary with !important, which in
+ * dark mode paints a light grey button inside our dark dialog. Our own buttons
+ * use .btn-outline-secondary, so this only guards a stray .btn-secondary - and
+ * it has to answer !important with !important. */
+.rangeos-modal .btn.btn-secondary {
+    border-color: var(--rangeos-modal-control) !important;
+    background-color: var(--rangeos-modal-surface) !important;
+    color: var(--rangeos-modal-ink) !important;
 }
 .rangeos-modal .btn-secondary,
 .rangeos-modal .btn-outline-secondary {
     border-color: var(--rangeos-modal-control);
     background-color: var(--rangeos-modal-surface);
-    color: var(--rangeos-modal-ink-2);
+    color: var(--rangeos-modal-ink);
 }
 .rangeos-modal .btn-secondary:hover,
 .rangeos-modal .btn-outline-secondary:hover {
+    border-color: var(--rangeos-modal-ink-2);
     background-color: var(--rangeos-modal-sunken);
     color: var(--rangeos-modal-ink);
 }
@@ -1120,6 +1170,155 @@
 .rangeos-modal .rangeos-chip-remove:focus-visible {
     outline: 2px solid var(--rangeos-modal-accent);
     outline-offset: 1px;
+}
+/* The mapping dialog's own furniture, so it reads as the same product as the
+ * pages behind it rather than as raw Bootstrap. */
+.rangeos-modal .rangeos-modal-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+}
+.rangeos-modal .rangeos-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: .375rem;
+    margin-bottom: .875rem;
+}
+.rangeos-modal .rangeos-modal-field:last-child {
+    margin-bottom: 0;
+}
+/* The scenarios field absorbs the spare height; min-height: 0 lets it shrink so
+ * the list inside it can scroll rather than push the dialog taller. */
+.rangeos-modal .rangeos-modal-field-grow {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.rangeos-modal .rangeos-modal-label {
+    color: var(--rangeos-modal-ink-2);
+    font-size: .8125rem;
+    font-weight: 600;
+}
+/* Label and IRI share the first line: wrapping the label onto its own row cost a
+ * line of height for two words. */
+.rangeos-modal .rangeos-modal-auid {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: .5rem;
+    margin: 0;
+    color: var(--rangeos-modal-ink-2);
+    font-size: .75rem;
+    line-height: 1.45;
+}
+.rangeos-modal .rangeos-modal-auid-label {
+    flex: 0 0 auto;
+    font-weight: 600;
+}
+.rangeos-modal .rangeos-modal-auid code {
+    flex: 1 1 auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-width: 0;
+    color: var(--rangeos-modal-ink-2);
+    font-size: .75rem;
+    overflow-wrap: anywhere;
+}
+.rangeos-modal .rangeos-modal-hint {
+    margin: 0;
+    padding: .5rem .75rem;
+    border: 1px solid var(--rangeos-modal-accent-border);
+    border-radius: 8px;
+    background-color: var(--rangeos-modal-accent-tint);
+    color: var(--rangeos-modal-accent-ink);
+    font-size: .8125rem;
+}
+.rangeos-modal .rangeos-modal-search {
+    display: flex;
+    gap: .5rem;
+}
+.rangeos-modal .rangeos-modal-search .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.rangeos-modal .rangeos-modal-search .btn {
+    flex: 0 0 auto;
+    min-height: 36px;
+}
+/* A fixed viewport into the results. Without it the list collapses to the height
+ * of the "Searching..." line on every search and page change, and the dialog
+ * jumps down and back as the results arrive. */
+/* Both classes are on the element, and .list-group below sets `overflow: hidden`
+ * to clip its rounded corners - which at equal specificity would win and stop
+ * this list scrolling. Qualifying with .list-group keeps the scroll. */
+.rangeos-modal .list-group.rangeos-scenario-results {
+    flex: 1 1 auto;
+    min-height: 9rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.rangeos-modal .rangeos-scenario-results > div {
+    padding: .625rem .75rem;
+    color: var(--rangeos-modal-ink-2);
+    font-size: .8125rem;
+}
+/* Reserved height for the same reason: the pager is emptied while a search is in
+ * flight, and without this the dialog would jump as it comes and goes. */
+.rangeos-modal .rangeos-scenario-paging {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    min-height: 2.125rem;
+    margin-top: .375rem;
+}
+.rangeos-modal .rangeos-page-btn {
+    flex: 0 0 auto;
+    min-width: 6rem;
+}
+/* Takes the space between the two buttons, so they sit at the ends and the count
+ * stays centred whatever its length. */
+.rangeos-modal .rangeos-page-summary {
+    flex: 1 1 auto;
+    color: var(--rangeos-modal-ink-2);
+    font-size: .75rem;
+    text-align: center;
+}
+/* Label and current selection share one row. */
+.rangeos-modal .rangeos-modal-selectedrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .375rem .625rem;
+}
+.rangeos-modal .rangeos-modal-selectedrow > .rangeos-modal-label {
+    flex: 0 0 auto;
+}
+.rangeos-modal .rangeos-modal-selected {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .375rem .5rem;
+    min-width: 0;
+}
+.rangeos-modal .rangeos-modal-empty {
+    color: var(--rangeos-modal-ink-2);
+    font-size: .8125rem;
+}
+.rangeos-modal .list-group-item-action {
+    text-align: left;
+    cursor: pointer;
+}
+.rangeos-modal .list-group-item-action strong {
+    display: block;
+    font-size: .875rem;
+    font-weight: 600;
+}
+.rangeos-modal .list-group-item-action small {
+    color: var(--rangeos-modal-ink-2);
+    font-size: .75rem;
+    line-height: 1.45;
 }
 .rangeos-modal .list-group {
     overflow: hidden;
